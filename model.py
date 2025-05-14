@@ -4,6 +4,7 @@ from flask import flash,request, redirect, url_for, session
 from io import TextIOWrapper
 from json import dumps, loads
 from werkzeug.security import generate_password_hash
+from concurrent.futures import ThreadPoolExecutor
 
 ALLOWED_EXTENSIONS = {'csv'}
 MISSINGVAL = "Missing"
@@ -34,7 +35,7 @@ def login_required(f):
 
 # # SECTION - MAKE DB FROM UPLOAD CSVs -------------------------------------------------
 # populate user table
-def populate_user_table(data, db, keys, user_type):
+def populate_user_table(data, db, cursor, keys, user_type):
     """
     Populate user table with data from CSV file.
     
@@ -42,33 +43,44 @@ def populate_user_table(data, db, keys, user_type):
     
     user_type is the type of user (superamdin, admin, editor, viewer).
     """
+    
+    batch = []
+    passwords = []
+    for row in data:
+        passwords.append((get_pass(row[keys[1]].lower(), row[keys[4]].lower())))
 
-    total = 0
+    with ThreadPoolExecutor() as executor:
+        pass_hash = list(executor.map(hash_password, passwords))
+
+    # Generate passhash
+
     for row in data:
         username = row[keys[0]].lower()
         email = row[keys[3]].lower()
         phone = row[keys[4]].lower()
         fullname = row[keys[1]].lower()
         sex = True if row[keys[2]].lower() == "male" else False
-        
-        # Generate passhash
-        password = (get_hash(fullname, phone))
-        
+        hash = pass_hash[data.index(row)]
 
-        try:
-            db.execute(f"INSERT INTO users (username, passhash, fullname, sex, role_id, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(username) DO NOTHING",
-                   (username, password, fullname, sex, user_type, email, phone))
-            print(f"total inserts {total} full name {fullname}")
-            total += 1
-        except Exception as e:
-            flash(f"Data missing Teacher or Student in CSV file. Please validate and try again. Error Type {e}", "danger")
-            return redirect(url_for("index"))
+        batch.append((username, hash, fullname, sex, user_type, email, phone))
+
+    try:
+        db.execute("BEGIN")
+        for b in chunk(batch, 500):
+            cursor.executemany(f"INSERT INTO users (username, passhash, fullname, sex, role_id, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?)", b)
+    except Exception as e:
+        print(f"ERROR - {e}")
+        flash(f"Data missing Teacher or Student in CSV file. Please validate and try again. Error Type {e}", "danger")
+        return redirect(url_for("index"))
     
     db.commit()
-        
+
+def chunk(all_rows, size):
+    for i in range(0, len(all_rows), size):
+        yield all_rows[i:i+size]
 
 # generate password
-def get_hash(name, phone):
+def get_pass(param1, param2):
     """
     Generate a password hash from first 3 chars of email and last 3 chars of phone number.
 
@@ -77,32 +89,37 @@ def get_hash(name, phone):
 
     # get firt 3 chars of email and last 3 chars of phone number
     # check if email and phone number are valid
-    email_char = name[:3]
-    phone_char = phone[-3:]
-    if not email_char or not phone_char:
+    param1_char = param1[:3]
+    param2_char = param2[-3:]
+    if not param1_char or not param2_char:
         raise ValueError("Invalid email or phone number format.")
     
     # generate password hash
-    password = email_char + phone_char
+    password = param2_char + param2_char
 
     # check if password is valid
     # check if password is at least 6 characters long
     if len(password) < 6:
-        flash("Error while generating password. Please check email and phone numbers in CSV files. All must be valid type.")
+        flash(f"Error while generating password. Please check {param1} and {param2} in CSV files. All must be valid type.")
         return redirect(url_for("index"))
     
-    return generate_password_hash(password)
+    return password
+
+
+# wrapper function for ThreadPoolExecutor
+def hash_password(password):
+    return generate_password_hash(password, method='pbkdf2:sha256:100000')
 
 
 # make programs table
-def make_program_table(data, db, lastcol):
+def make_program_table(data, db, cursor, lastcol):
     """
     Create programs table from Program CSV
 
     lastcol (INTEGER) - it is last row past which list of teaches begin - INDEX strats from 1
     """
     failedrow = []
-
+    batch = []
     for row in data:
         row_keys = list(row.keys())
         program_code = row["Program code"]
@@ -124,25 +141,29 @@ def make_program_table(data, db, lastcol):
         
             # Section start from 0
             section = n - lastcol
-            try:
-                db.execute("INSERT INTO programs(program_code, program_name, program_section, course_name, max_grades, teacher_id) VALUES(?, ?, ?, ?, ?, ?)",
-                        (program_code, program_name, section, course_name, MAXGRADES, t_id))
-            except Exception as e:
-                flash(f"Data missing in Programs CSV file. Please validate and try again. Error Type {e}", "danger")
-                return redirect(url_for("index"))
+
+            batch.append((program_code, program_name, section, course_name, MAXGRADES, t_id))
+        
+    try:
+        db.execute("BEGIN")
+        for b in chunk(batch, 500):
+            cursor.executemany("INSERT INTO programs(program_code, program_name, program_section, course_name, max_grades, teacher_id) VALUES(?, ?, ?, ?, ?, ?)", b)
+    except Exception as e:
+        flash(f"Data missing in Programs CSV file. Please validate and try again. Error Type {e}", "danger")
+        return redirect(url_for("index"))
             
-    db.commit()
+    db.commit()    
     return failedrow
 
 
 # make studnet table
-def make_students_table(data, db, lastcol):
+def make_students_table(data, db, cursor, lastcol):
     """
     Populate students table connected with
 
     lastcol (INTEGER) - it is last row past which list of subjects begin - INDEX strats from 1
     """
-
+    batch = []
     for row in data:
         row_keys = list(row.keys())
         roll_no = row["rollno"]
@@ -154,8 +175,6 @@ def make_students_table(data, db, lastcol):
 
         if student_id[0] is None:
             break
-        
-        print(f"student id = {student_id[0]}")
 
         course_ids = []
         grades = []
@@ -164,15 +183,18 @@ def make_students_table(data, db, lastcol):
                 break
             
             course_id = db.execute("SELECT id FROM programs WHERE program_code = ? AND course_name = ?", (row["programcode"], row[row_keys[n]])).fetchone()
-            print(f"course id = {course_id[0]}")
             course_ids.append(course_id[0])
             grades.append(0)
-        
-        try:
-            db.execute("INSERT INTO students (roll_no, registration_id, section, grades, course_ids, user_id) VALUES(?, ?, ?, ?, ?, ?)", (roll_no, reg_no, section, dumps(grades), dumps(course_ids), student_id[0],))
-        except Exception as e:
-            flash(f"Data missing in Student CSV file. Please validate and try again. Error Type {e}", "danger")
-            return redirect(url_for("index"))
+
+        batch.append((roll_no, reg_no, section, dumps(grades), dumps(course_ids), student_id[0],))
+    
+    try:
+        db.execute("BEGIN")
+        for b in chunk(batch, 500):
+            cursor.executemany("INSERT INTO students (roll_no, registration_id, section, grades, course_ids, user_id) VALUES(?, ?, ?, ?, ?, ?)", b)
+    except Exception as e:
+        flash(f"Data missing in Student CSV file. Please validate and try again. Error Type {e}", "danger")
+        return redirect(url_for("index"))
     
     db.commit()
 
@@ -192,5 +214,3 @@ def section_to_int(char):
 # Get Student Info
 
 # Get program courses list
-
-

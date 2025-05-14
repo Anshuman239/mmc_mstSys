@@ -48,7 +48,14 @@ def close_db(error):
 @app.route('/')
 @m.login_required
 def index():
-    return render_template("dashboard.html", title="Home", page='dashboard')
+    if session["userid"] is not None:
+        # SUPERADMIN dashboard
+        if session["role_id"] == 1:
+            
+            return render_template("./superadmin/superadmin_dash.html", title="Home", page="dashboard")
+    
+
+    return render_template("dashboard.html", title="Home", page="dashboard")
 
 # Route for the login page
 @app.route('/login', methods=['GET', 'POST'])
@@ -211,6 +218,7 @@ def upload():
             flash("Database connection error please contact admin!", "danger")
             return redirect(url_for("upload"))
         
+        cursor = db.cursor()
         
         # dict list containing values from uploaded CSV files
         csv_data = {"teacherdata":[], "studentdata":[], "programdata":[]}
@@ -244,14 +252,15 @@ def upload():
         db.execute("DELETE FROM users WHERE role_id != ?", (1,))
         db.execute("DELETE FROM programs")
         db.execute("DELETE FROM students")
+        db.commit()
 
         # print(f"student len = {len(csv_data["studentdata"])} teacher len = {len(csv_data["teacherdata"])}")
 
         # Populate user Table with teacher data - role_id = 2 (editor)
-        m.populate_user_table(csv_data["teacherdata"], db, ['e-mail', 'name', 'sex', 'e-mail', 'phone'], 3)
-        m.populate_user_table(csv_data["studentdata"], db, ['registrationid', 'name', 'sex', 'e-mail', 'phone'], 4)
-        program_log = m.make_program_table(csv_data["programdata"], db, 3)
-        m.make_students_table(csv_data["studentdata"], db, 8)
+        m.populate_user_table(csv_data["teacherdata"], db, cursor, ['e-mail', 'name', 'sex', 'e-mail', 'phone'], 3)
+        m.populate_user_table(csv_data["studentdata"], db, cursor, ['registrationid', 'name', 'sex', 'e-mail', 'phone'], 4)
+        program_log = m.make_program_table(csv_data["programdata"], db, cursor, 3)
+        m.make_students_table(csv_data["studentdata"], db, cursor, 8)
         
         if len(program_log) > 0:
             flash(f"Data miss match in Programs CSV: {program_log}", "danger")
