@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+
+{% block main %}
+<div class="container">
+    <div class="text-center mt-5">
+        <h1>Multani Mal Modi College MST Portal</h1>
+        <p class="lead">Create your Superadmin account</p>
+        <div class="alert alert-info" role="alert">
+            <p><strong>Note:</strong> This is a one time process.</p>
+            <p>Only use this portal to create Superadmin Account. All other users should be created from Superadmin
+                Dashboard.</p>
+            <p>Once Superadmin is created this page will be locked out.</p>
+            <p>Please check and note all the fields before submiting.</p>
+        </div>
+    </div>
+    <form method="post" action="/registeradmin{{registerKey}}">
+        <div class="row justify-content-center">
+            <div class="col-md-3 p-4 shadow-lg bg-body-tertiary rounded">
+                <h3>Register</h3>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" type="text" id="userid" name="username" placeholder="Username" required>
+                            <label for="username">Username</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" id="passid" type="password" name="password" placeholder="Password" required>
+                            <label for="passid">Password</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" id="cnf-passid" type="password" name="cnf_password"
+                                placeholder="Confirm password" required>
+                            <label for="cnf-passid">Confirm password</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" id="full-name" type="text" name="fullname"
+                                placeholder="Fullname" required>
+                            <label for="full-name">Full Name</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" id="email" type="email" name="email" placeholder="e-mail"
+                                required>
+                            <label for="cnf-passid">Email</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <input class="form-control" id="phone" type="number" name="phone" placeholder="Phone Number"
+                                required>
+                            <label for="cnf-passid">Phone number</label>
+                        </div>
+                    </div>
+                </div>
+                <!-- user type -->
+                <div class="row my-3">
+                    <div class="col">
+                        <div class="form-floating">
+                            <select class="form-select" id="user-type" name="role_id" required>
+                                <option value="1">Superadmin</option>
+                                <option value="2">Admin</option>
+                                <option value="3">Teacher</option>
+                                <option value="4">Student</option>
+                            </select>
+                            <label for="user-type">User Type</label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Register</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

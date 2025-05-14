@@ -1,0 +1,40 @@
+<nav class="navbar navbar-expand-md bg-primary" data-bs-theme="dark">
+  <div class="container-md">
+    <a class="navbar-brand" href="#">MMMC MST PORTAL</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+      aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarColor01">
+      {% if session["userid"] %}
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item">
+          <a class="nav-link {{ 'active' if page=='dashboard'  }}" href="/">Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {{ 'active' if page=='profile' }}" href="#">Profile
+          </a>
+        </li>
+        {% if session["role_id"] == 1 %}
+        <li class="nav-item">
+          <a class="nav-link {{ 'active' if page=='upload' }}" href="/upload">Upload CSV
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+      {% endif %}
+      <div class="navbar-nav d-flex ms-auto">
+        {% if session["userid"] %}
+        <span class="nav-item">
+          <a class="nav-link" href="/logout">Sign Out</a>
+        </span>
+        {% else %}
+        <span class="nav-item">
+          <a class="nav-link" href="/login">Sign In</a>
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>
