@@ -61,26 +61,11 @@ def close_db(error):
 @app.route('/', methods=['GET', 'POST'])
 @m.login_required
 def index():
-    # Post requests from dashboard
-    # if request.method == "POST":
-    #     req = request.get_json()
-        
-    #     if not req:
-    #         return jsonify({"error": "Invalid Request - no data found"}), 404
-
-    #     if req["query_type"] == "programs":
-    #         db = get_db()
-    #         responce = db.execute("SELECT DISTINCT program_section FROM programs WHERE program_code = ?", (req["query_filter"],)).fetchall()
-
-    #         dict_responce = [dict(row) for row in responce]
-
-    #         return jsonify(dict_responce)
-
     # SUPERADMIN dashboard
     if session["role_id"] == 1:
         db = get_db()
         programs = db.execute("SELECT DISTINCT program_code, program_name FROM programs").fetchall()
-        teachers = db.execute("SELECT fullname, email, phone FROM users WHERE role_id = ?", (3,)).fetchall()
+        teachers = db.execute("SELECT id, fullname, email, phone, sex FROM users WHERE role_id = ? ORDER BY fullname ASC", (3,)).fetchall()
         section = db.execute("SELECT DISTINCT program_code, program_section FROM programs").fetchall()
 
         programs_dict = [dict(row) for row in programs]
@@ -179,14 +164,14 @@ def programs():
                                 JOIN students ON users.id = students.user_id
                                 JOIN programs ON students.course_id = programs.id
                                 WHERE students.section = ? AND programs.program_code = ?
-                                ORDER BY students.registration_id ASC''',
+                                ORDER BY students.roll_no ASC''',
                                 (program_section, program_code)).fetchall()
 
         teachers = db.execute('''SELECT DISTINCT users.fullname, users.id, programs.course_name
                               FROM users
                               JOIN programs ON users.id = programs.teacher_id
                               WHERE programs.program_section = ? AND programs.program_code = ? AND users.role_id = ?
-                              ORDER BY users.id ASC''',
+                              ORDER BY users.fullname ASC''',
                               (program_section, program_code, 3)).fetchall()
 
 
@@ -318,7 +303,59 @@ def register():
 @app.route('/student')
 @m.login_required
 def student():
-    return render_template('student.html')
+    student_id = request.args.get("id")
+
+    if not student_id:
+        flash ("Invalid request", "danger")
+        return redirect(url_for("index"))
+    
+    db = get_db()
+
+    student_info = db.execute('''SELECT users.id, users.fullname, users.sex, users.email, users.phone,
+                                students.roll_no, students.registration_id, students.section, students.grade,
+                                programs.program_code, programs.program_name, programs.course_name, programs.max_grades, programs.teacher_id
+                                FROM users
+                                JOIN students ON users.id = students.user_id
+                                JOIN programs ON students.course_id = programs.id
+                                WHERE students.registration_id = ? AND users.role_id = ?''',
+                                (student_id, 4)).fetchall()
+    
+    student_info_dict = [dict(row) for row in student_info]
+
+    for row in student_info_dict:
+        try:
+            teacher_name = dict(db.execute("SELECT fullname FROM users WHERE id=? AND role_id=?", (row["teacher_id"], 3)).fetchone())
+        except:
+            teacher_name = {"fullname": "not found"}
+        row["teacher_name"] = teacher_name["fullname"]
+        row["section"] = chr(row["section"] + 65)
+
+
+    return render_template("student.html", user_type = session["role_id"], student_info=student_info_dict)
+
+
+@app.route('/teacher')
+@m.login_required
+def teacher():
+    teacher_id = request.args.get("id")
+
+    if not teacher_id:
+        flash("Invalid Request", "danger")
+        return redirect(url_for("index"))
+    
+    db = get_db()
+
+    teacher_info = db.execute('''SELECT users.id, users.fullname, users.email, users.phone, users.sex,
+                              programs.program_code, programs.program_name, programs.course_name
+                              FROM users
+                              JOIN programs ON users.id =  programs.teacher_id
+                              WHERE users.id = ? AND users.role_id = ?''',
+                              (teacher_id, 3)).fetchall()
+
+    teacher_info_dict = [dict(row) for row in teacher_info]
+
+    return render_template("teacher.html", user_type=session["role_id"], teacher_info=teacher_info_dict)
+
 
 # Route for the upload page - UPLOAD CSV TO MAKE DATABASE
 @app.route('/upload', methods=['GET', 'POST'])

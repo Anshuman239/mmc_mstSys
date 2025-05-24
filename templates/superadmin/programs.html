@@ -67,7 +67,14 @@
                     <div class="row pb-2 px-0">
                         <div class="col fw-bold ms-3">{{ teachers.index(row) + 1 }}</div>
                         <div class="col">{{ row["fullname"].title() }}</div>
-                        <div class="col">{{ row["course_name"] }}</div>
+                        <div class="col">
+                            {% for subject in row["course_name"] %}
+                            <div class="row my-0 py-0">
+                                {{ row["course_name"].index(subject)+1 }}.
+                                {{ subject }}
+                            </div>
+                            {% endfor %}
+                        </div>
                         <div class="col">
                             <a class="btn btn-light px-2 py-1" href="/teacher?id={{ row['teacher_id'] }}">
                                 <span class="material-symbols-outlined align-top" style="font-size: 1.5em;">

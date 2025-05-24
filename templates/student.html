@@ -1,0 +1,62 @@
+{% extends 'layout.html' %}
+
+{% block main %}
+<div class="container-lg mt-4">
+    <div class="mt-5">
+        {% if user_type == 1 %}
+        <h4>Student Info</h4>
+        {% else %}
+        <h4>Student Info</h4>
+        {% endif %}
+    </div>
+    <div class="row mt-3 shadow-lg p-3 bg-body-tertiary rounded border">
+        <div class="col-sm-2 fw-bold fs-4">Name:</div>
+        <div class="col-auto fs-4">{{ student_info[0]["fullname"].title() }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Sex:</div>
+        {% if student_info[0]["sex"] == 1 %}
+        <div class="col-auto">Male</div>
+        {% else %}
+        <div class="col-auto">Female</div>
+        {% endif %}
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">e-mail:</div>
+        <div class="col-auto">{{ student_info[0]["email"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Phone:</div>
+        <div class="col-auto">+91-{{ student_info[0]["phone"][:6] }}-{{ student_info[0]["phone"][6:] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Roll Number:</div>
+        <div class="col-auto">{{ student_info[0]["roll_no"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Registration Id:</div>
+        <div class="col-auto">{{ student_info[0]["registration_id"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Program Code</div>
+        <div class="col-auto">{{ student_info[0]["program_code"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Section:</div>
+        <div class="col-auto">{{ student_info[0]["section"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Program Name:</div>
+        <div class="col-auto">{{ student_info[0]["program_name"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col fw-semibold">Subject</div>
+        <div class="col fw-semibold">Teacher</div>
+        <div class="col fw-semibold">Marks</div>
+        {% for row in student_info %}
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col">{{ row["course_name"] }}</div>
+        <div class="col">{{ row["teacher_name"].title() }}</div>
+        <div class="col">{{ row["grade"] }}/{{ row["max_grades"] }}</div>
+        {% endfor %}
+    </div>
+    {% if user_type == 1 %}
+    <div class="row mt-3">
+        <div class="col">
+            <button type="button" class="btn btn-primary">Edit Data</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

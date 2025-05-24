@@ -38,7 +38,8 @@
                             </span>
                         </td>
                         <td>
-                            <a class="btn btn-light px-2 py-1" href="/programs?code={{ row['program_code'] }}&section=0">
+                            <a class="btn btn-light px-2 py-1"
+                                href="/programs?code={{ row['program_code'] }}&section=0">
                                 <span class="material-symbols-outlined align-top" style="font-size: 1.5em;">
                                     search
                                 </span>
@@ -59,8 +60,10 @@
                     <tr class="table-primary">
                         <th>S.no.</th>
                         <th>Name</th>
+                        <th>Sex</th>
                         <th>e-mail</th>
                         <th>Phone</th>
+                        <th>Details</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -68,8 +71,23 @@
                     <tr class="teachers" id="{{ row['fullname'] }}">
                         <td>{{ teachers.index(row) + 1 }}</td>
                         <td>{{ row["fullname"].title() }}</td>
+                        <td>
+                            {% if row["sex"] == 1 %}
+                            Male
+                            {% else %}
+                            Female
+                            {% endif %}
+                        </td>
                         <td>{{ row["email"] }}</td>
                         <td>{{ row["phone"] }}</td>
+                        <td>
+                            <a class="btn btn-light px-2 py-1"
+                                href="/teacher?id={{ row['id'] }}">
+                                <span class="material-symbols-outlined align-top" style="font-size: 1.5em;">
+                                    search
+                                </span>
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

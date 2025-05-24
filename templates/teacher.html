@@ -1,0 +1,47 @@
+{% extends 'layout.html' %}
+
+{% block main %}
+<div class="container-lg mt-4">
+    <div class="mt-5">
+        {% if user_type == 1 %}
+        <h4>Teacher Info</h4>
+        {% else %}
+        <h4>Teacher Portal</h4>
+        {% endif %}
+    </div>
+    <div class="row mt-3 shadow-lg p-3 bg-body-tertiary rounded border">
+        <div class="col-sm-2 fw-bold fs-4">Name:</div>
+        <div class="col-auto fs-4">{{ teacher_info[0]["fullname"].title() }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">Sex:</div>
+        {% if teacher_info[0]["sex"] == 1 %}
+        <div class="col-sm-2">Male</div>
+        {% else %}
+        <div class="col-sm-2">Female</div>
+        {% endif %}
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">e-mail</div>
+        <div class="col-auto">{{ teacher_info[0]["email"] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-2 fw-semibold">phone</div>
+        <div class="col-auto">+91-{{ teacher_info[0]["phone"][:6] }}-{{ teacher_info[0]["phone"][6:] }}</div>
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col fw-semibold">Program Code</div>
+        <div class="col fw-semibold">Program Name</div>
+        <div class="col fw-semibold">Course Name</div>
+        {% for row in teacher_info %}
+        <div class="w-100 my-1 border-top"></div>
+        <div class="col">{{ row["program_code"] }}</div>
+        <div class="col">{{ row["program_name"] }}</div>
+        <div class="col">{{ row["course_name"] }}</div>
+        {% endfor %}
+    </div>
+    {% if user_type == 1 %}
+    <div class="row mt-3">
+        <div class="col">
+            <button type="button" class="btn btn-primary">Edit Data</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
