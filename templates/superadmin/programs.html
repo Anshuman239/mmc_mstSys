@@ -1,0 +1,85 @@
+{% extends 'layout.html' %}
+
+{% block main %}
+<div class="container-lg my-4">
+    <h1 class="my-5">
+        {{ program_code }} Details
+    </h1>
+    <div class="shadow-lg pt-3 pb-2 bg-primary rounded-top">
+        <h4 class="ps-3 text-white">Students</h4>
+    </div>
+    <div style="overflow: auto; position: relative; max-height: 460px;">
+        <div class="table table-striped table-hover">
+            <div class="row bg-info-subtle py-3" style="position: sticky; top: 0; z-index: 1;">
+                <div class="col fw-bold ms-3">#</div>
+                <div class="col fw-bold">Roll No.</div>
+                <div class="col fw-bold">Reg No.</div>
+                <div class="col fw-bold">Name</div>
+                <div class="col fw-bold">Details</div>
+            </div>
+            <div>
+                {% for row in students %}
+                <div class="table my-1">
+                    <div class="row pb-2 px-0" data-bs-toggle="collapse" href="#{{ row['registration_id'] }}"
+                        style="cursor: pointer;">
+                        <div class="col fw-bold ms-3">{{ students.index(row) + 1 }}</div>
+                        <div class="col">{{ row["roll_no"] }}</div>
+                        <div class="col">{{ row["registration_id"] }}</div>
+                        <div class="col">{{ row["fullname"].title() }}</div>
+                        <div class="col">
+                            <a class="btn btn-light px-2 py-1" href="/student?id={{ row['registration_id'] }}">
+                                <span class="material-symbols-outlined align-top" style="font-size: 1.5em;">
+                                    search
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="collapse py-0" id="{{ row['registration_id'] }}">
+                        <div class="row pt-0 pb-3 d-inline-flex">
+                            <div class="col-sm py-0 py-sm-3 material-symbols-outlined">subdirectory_arrow_right</div>
+                            <div class="col-sm py-2 py-sm-3 fw-medium">Subjects</div>
+                            {% for course in row["course_name"] %}
+                            <div class="col-sm-auto py-0 py-sm-3">
+                                {{ course }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="shadow-lg pt-3 pb-2 bg-primary rounded-top mt-5">
+        <h4 class="ps-3 text-white">Teachers</h4>
+    </div>
+    <div style="overflow: auto; position: relative; max-height: 460px;">
+        <div class="table table-striped table-hover">
+            <div class="row bg-info-subtle py-3" style="position: sticky; top: 0; z-index: 1;">
+                <div class="col fw-bold ms-3">#</div>
+                <div class="col fw-bold">Name</div>
+                <div class="col fw-bold">Subjects</div>
+                <div class="col fw-bold">Details</div>
+            </div>
+            <div>
+                {% for row in teachers %}
+                <div class="table my-1">
+                    <div class="row pb-2 px-0">
+                        <div class="col fw-bold ms-3">{{ teachers.index(row) + 1 }}</div>
+                        <div class="col">{{ row["fullname"].title() }}</div>
+                        <div class="col">{{ row["course_name"] }}</div>
+                        <div class="col">
+                            <a class="btn btn-light px-2 py-1" href="/teacher?id={{ row['teacher_id'] }}">
+                                <span class="material-symbols-outlined align-top" style="font-size: 1.5em;">
+                                    search
+                                </span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

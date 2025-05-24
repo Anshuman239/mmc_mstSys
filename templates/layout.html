@@ -7,24 +7,27 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title> {{ title }} | MMMC MST PORTAL</title>
         <link rel="stylesheet" href="static/Zephyr/bootstrap.min.css">
+        <link rel="stylesheet" href="static/style.css">
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
-    </head>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=search,subdirectory_arrow_right"/>
     <body>
-        {% include 'partials/navbar.html' %}
-        
-        <!-- alert messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} text-center" role="alert">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        
-        {% block main %}{% endblock %}
-        {% include 'partials/footer.html' %}
+        <div class="container-flex">
+            {% include 'partials/navbar.html' %}
+            
+            <!-- alert messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} text-center" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            {% block main %}{% endblock %}
+            
+            {% include 'partials/footer.html' %}
+        </div>
     </body>
 </html>

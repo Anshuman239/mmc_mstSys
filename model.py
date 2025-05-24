@@ -10,10 +10,18 @@ ALLOWED_EXTENSIONS = {'csv'}
 MISSINGVAL = "Missing"
 MAXGRADES = 100
 
+
 # check if the file is allowed
 def allowed_file(filename):
     """Check if the file is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# yeild slice of list - used to batch insert into database 
+def chunk(all_rows, size):
+    for i in range(0, len(all_rows), size):
+        yield all_rows[i:i+size]
+
 
 def csvDataStreamToList(dataStream):
     file = TextIOWrapper(dataStream, encoding='utf-8-sig')
@@ -75,9 +83,6 @@ def populate_user_table(data, db, cursor, keys, user_type):
     
     db.commit()
 
-def chunk(all_rows, size):
-    for i in range(0, len(all_rows), size):
-        yield all_rows[i:i+size]
 
 # generate password
 def get_pass(param1, param2):
@@ -108,7 +113,7 @@ def get_pass(param1, param2):
 
 # wrapper function for ThreadPoolExecutor
 def hash_password(password):
-    return generate_password_hash(password, method='pbkdf2:sha256:100000')
+    return generate_password_hash(password, method='pbkdf2:sha256:10000')
 
 
 # make programs table
@@ -163,6 +168,7 @@ def make_students_table(data, db, cursor, lastcol):
 
     lastcol (INTEGER) - it is last row past which list of subjects begin - INDEX strats from 1
     """
+
     batch = []
     for row in data:
         row_keys = list(row.keys())
@@ -177,21 +183,21 @@ def make_students_table(data, db, cursor, lastcol):
             break
 
         course_ids = []
-        grades = []
+        grades = 0
         for n in range(lastcol, len(row)):
             if row[row_keys[n]] == "":
                 break
             
             course_id = db.execute("SELECT id FROM programs WHERE program_code = ? AND course_name = ?", (row["programcode"], row[row_keys[n]])).fetchone()
-            course_ids.append(course_id[0])
-            grades.append(0)
+            batch.append((roll_no, reg_no, section, grades, course_id[0], student_id[0],))
+            # course_ids.append(course_id[0])
+            # grades.append(0)
 
-        batch.append((roll_no, reg_no, section, dumps(grades), dumps(course_ids), student_id[0],))
     
     try:
         db.execute("BEGIN")
         for b in chunk(batch, 500):
-            cursor.executemany("INSERT INTO students (roll_no, registration_id, section, grades, course_ids, user_id) VALUES(?, ?, ?, ?, ?, ?)", b)
+            cursor.executemany("INSERT INTO students (roll_no, registration_id, section, grade, course_id, user_id) VALUES(?, ?, ?, ?, ?, ?)", b)
     except Exception as e:
         flash(f"Data missing in Student CSV file. Please validate and try again. Error Type {e}", "danger")
         return redirect(url_for("index"))
@@ -201,7 +207,7 @@ def make_students_table(data, db, cursor, lastcol):
 
 def section_to_int(char):
     c = char.lower()
-    section = ord(c)
+    section = ord(c) - 97
     return section
 
 

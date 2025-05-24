@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, flash, g, render_template, request, redirect, url_for, session
+from flask import Flask, flash, g, render_template, request, redirect, url_for, session, jsonify
 from flask_session import Session
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlite3 import connect, Error, Row
@@ -8,11 +8,14 @@ from re import fullmatch, search
 
 import model as m
 
+from pprint import pp
+
 app = Flask(__name__)
 
 # load environment variables from .env file
 load_dotenv()
 REGISTERADMIN = os.environ.get("REGISTERADMIN")
+ASCIIBASE = 65
 
 
 # Set-up Server Session
@@ -36,6 +39,15 @@ def get_db():
             return None
     return g.db
 
+
+def remove_duplicates_in_list(dict_list, remove_key):
+    keys_found = []
+    for row in dict_list[:]:
+        if row[remove_key] in keys_found:
+            dict_list.remove(row)
+            continue
+        keys_found.append(row[remove_key])
+
 # Close the database connection
 @app.teardown_appcontext
 def close_db(error):
@@ -44,16 +56,50 @@ def close_db(error):
     if db is not None:
         db.close()
 
+
 # Default route
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 @m.login_required
 def index():
-    if session["userid"] is not None:
-        # SUPERADMIN dashboard
-        if session["role_id"] == 1:
-            
-            return render_template("./superadmin/superadmin_dash.html", title="Home", page="dashboard")
-    
+    # Post requests from dashboard
+    # if request.method == "POST":
+    #     req = request.get_json()
+        
+    #     if not req:
+    #         return jsonify({"error": "Invalid Request - no data found"}), 404
+
+    #     if req["query_type"] == "programs":
+    #         db = get_db()
+    #         responce = db.execute("SELECT DISTINCT program_section FROM programs WHERE program_code = ?", (req["query_filter"],)).fetchall()
+
+    #         dict_responce = [dict(row) for row in responce]
+
+    #         return jsonify(dict_responce)
+
+    # SUPERADMIN dashboard
+    if session["role_id"] == 1:
+        db = get_db()
+        programs = db.execute("SELECT DISTINCT program_code, program_name FROM programs").fetchall()
+        teachers = db.execute("SELECT fullname, email, phone FROM users WHERE role_id = ?", (3,)).fetchall()
+        section = db.execute("SELECT DISTINCT program_code, program_section FROM programs").fetchall()
+
+        programs_dict = [dict(row) for row in programs]
+        teachers_dict = [dict(row) for row in teachers]
+        sections_dict = []
+
+        # convert section from int to uppercase char
+        for row in section:
+            dict_row = dict(row)
+            dict_row["program_section"] = chr(dict_row["program_section"] + ASCIIBASE)
+            sections_dict.append(dict_row)
+        
+
+        remove_duplicates_in_list(programs_dict, "program_code")
+        remove_duplicates_in_list(teachers_dict, "fullname")
+        
+        return render_template("./superadmin/superadmin_dash.html", title="Home", page="dashboard", programs=programs_dict, teachers=teachers_dict,
+                                sections=sections_dict)
+
 
     return render_template("dashboard.html", title="Home", page="dashboard")
 
@@ -111,6 +157,67 @@ def logout():
     flash("You have been logged out", "success")
     return redirect(url_for("login"))
 
+
+# route to search programs
+@app.route('/programs')
+@m.login_required
+def programs():
+    # render programs details for super admin
+    if session["role_id"] == 1:
+        program_code = request.args.get("code")
+        program_section = request.args.get("section")
+
+        if not program_code or not program_section:
+            flash("Invalid query.", "danger")
+            return redirect(url_for("index"))
+        
+        db = get_db()
+
+        students = db.execute('''SELECT DISTINCT users.fullname, students.roll_no, students.registration_id, programs.program_code,
+                                students.course_id, programs.course_name
+                                FROM users
+                                JOIN students ON users.id = students.user_id
+                                JOIN programs ON students.course_id = programs.id
+                                WHERE students.section = ? AND programs.program_code = ?
+                                ORDER BY students.registration_id ASC''',
+                                (program_section, program_code)).fetchall()
+
+        teachers = db.execute('''SELECT DISTINCT users.fullname, users.id, programs.course_name
+                              FROM users
+                              JOIN programs ON users.id = programs.teacher_id
+                              WHERE programs.program_section = ? AND programs.program_code = ? AND users.role_id = ?
+                              ORDER BY users.id ASC''',
+                              (program_section, program_code, 3)).fetchall()
+
+
+        students_dict = []
+        teachers_dict = []
+        
+        
+        # merge duplicates and add subjects to single list
+        found = []
+        for row in students:
+            if row["registration_id"] in found:
+                students_dict[len(students_dict) - 1]["course_name"].append(row["course_name"])
+                students_dict[len(students_dict) - 1]["course_id"].append(row["course_id"])
+                continue
+            found.append(row["registration_id"])
+            students_dict.append({"fullname": row["fullname"], "roll_no": row["roll_no"], "registration_id": row["registration_id"],
+                                  "program_code": row["program_code"], "course_name": [row["course_name"]], "course_id": [row["course_id"]]})
+            
+        found.clear()
+
+        for row in teachers:
+            if row["id"] in found:
+                teachers_dict[len(teachers_dict) - 1]["course_name"].append(row["course_name"])
+                continue
+            found.append(row["id"])
+            teachers_dict.append({"fullname": row["fullname"], "teacher_id": row["id"], "course_name": [row["course_name"]]})
+
+
+        return render_template("/superadmin/programs.html", students=students_dict, program_code=program_code, program_section=program_section, teachers=teachers_dict)
+    
+    return redirect(url_for("index"))
 
 # Route for the register page - for admin HIDDEN
 @app.route(f'/registeradmin{REGISTERADMIN}', methods=['GET', 'POST'])
@@ -205,6 +312,13 @@ def register():
     
     # If the request method is GET, render the registration page
     return render_template("register.html", title="Register", registerKey=REGISTERADMIN)
+
+
+# route to search students
+@app.route('/student')
+@m.login_required
+def student():
+    return render_template('student.html')
 
 # Route for the upload page - UPLOAD CSV TO MAKE DATABASE
 @app.route('/upload', methods=['GET', 'POST'])
