@@ -176,7 +176,7 @@ def make_students_table(data, db, cursor, lastcol):
         reg_no = row["registrationid"]
         section = section_to_int(row["section"])
 
-        student_id = db.execute("SELECT id FROM users WHERE fullname = ?", (row["name"].lower(),)).fetchone()
+        student_id = db.execute("SELECT id FROM users WHERE username = ?", (reg_no,)).fetchone()
         
 
         if student_id[0] is None:

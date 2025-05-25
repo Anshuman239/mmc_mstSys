@@ -24,13 +24,15 @@
         <div class="col-auto">{{ teacher_info[0]["email"] }}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">phone</div>
-        <div class="col-auto">+91-{{ teacher_info[0]["phone"][:6] }}-{{ teacher_info[0]["phone"][6:] }}</div>
+        <div class="col-auto">+91-{{ teacher_info[0]["phone"][:5] }}-{{ teacher_info[0]["phone"][5:] }}</div>
         <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-1 col-auto fw-semibold">#</div>
         <div class="col fw-semibold">Program Code</div>
         <div class="col fw-semibold">Program Name</div>
         <div class="col fw-semibold">Course Name</div>
         {% for row in teacher_info %}
         <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-1 col-auto">{{ teacher_info.index(row) + 1 }}</div>
         <div class="col">{{ row["program_code"] }}</div>
         <div class="col">{{ row["program_name"] }}</div>
         <div class="col">{{ row["course_name"] }}</div>

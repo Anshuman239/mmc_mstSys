@@ -24,7 +24,7 @@
         <div class="col-auto">{{ student_info[0]["email"] }}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">Phone:</div>
-        <div class="col-auto">+91-{{ student_info[0]["phone"][:6] }}-{{ student_info[0]["phone"][6:] }}</div>
+        <div class="col-auto">+91-{{ student_info[0]["phone"][:5] }}-{{ student_info[0]["phone"][5:] }}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">Roll Number:</div>
         <div class="col-auto">{{ student_info[0]["roll_no"] }}</div>
@@ -41,11 +41,13 @@
         <div class="col-sm-2 fw-semibold">Program Name:</div>
         <div class="col-auto">{{ student_info[0]["program_name"] }}</div>
         <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-1 col-auto fw-semibold">#</div>
         <div class="col fw-semibold">Subject</div>
         <div class="col fw-semibold">Teacher</div>
         <div class="col fw-semibold">Marks</div>
         {% for row in student_info %}
         <div class="w-100 my-1 border-top"></div>
+        <div class="col-sm-1 col-auto">{{ student_info.index(row) + 1 }}</div>
         <div class="col">{{ row["course_name"] }}</div>
         <div class="col">{{ row["teacher_name"].title() }}</div>
         <div class="col">{{ row["grade"] }}/{{ row["max_grades"] }}</div>
