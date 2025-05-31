@@ -299,6 +299,33 @@ def register():
     return render_template("register.html", title="Register", registerKey=REGISTERADMIN)
 
 
+# route to AJAX query
+@app.route('/query')
+@m.login_required
+def query():
+    valid_queries = ["teachers", "students"]
+    if session["role_id"] != 1:
+        return "Access Denied"
+    
+    try:
+        query_type = request.args.get("q")
+    except:
+        return "No query found."
+        
+    db = get_db()
+    if query_type not in valid_queries:
+        return "Access Denied"
+    
+    if query_type == "teachers":
+        responce = db.execute("SELECT DISTINCT program_code, program_name, course_name, max_grades FROM programs").fetchall()
+
+    responce_dict = [dict(row) for row in responce]
+
+    pp(responce_dict)
+
+    return jsonify(responce_dict)
+
+
 # route to search students
 @app.route('/student')
 @m.login_required
@@ -346,13 +373,18 @@ def teacher():
     db = get_db()
 
     teacher_info = db.execute('''SELECT users.id, users.fullname, users.email, users.phone, users.sex,
-                              programs.program_code, programs.program_name, programs.course_name
+                              programs.program_code, programs.program_name, programs.course_name, programs.program_section, programs.max_grades
                               FROM users
                               JOIN programs ON users.id =  programs.teacher_id
                               WHERE users.id = ? AND users.role_id = ?''',
                               (teacher_id, 3)).fetchall()
 
-    teacher_info_dict = [dict(row) for row in teacher_info]
+
+    teacher_info_dict = []
+    for row in teacher_info:
+        teacher_info_dict.append(dict(row))
+        teacher_info_dict[len(teacher_info_dict) - 1]["program_section"] = chr(teacher_info_dict[len(teacher_info_dict) - 1]["program_section"] + 65)
+        
 
     return render_template("teacher.html", user_type=session["role_id"], teacher_info=teacher_info_dict)
 

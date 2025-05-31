@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 
 {% block main %}
-<div class="container-lg mt-4">
+<div class="container-lg mt-4" id="info-form" data-role_id="teacher">
     <div class="mt-5">
         {% if user_type == 1 %}
         <h4>Teacher Info</h4>
@@ -11,39 +11,53 @@
     </div>
     <div class="row mt-3 shadow-lg p-3 bg-body-tertiary rounded border">
         <div class="col-sm-2 fw-bold fs-4">Name:</div>
-        <div class="col-auto fs-4">{{ teacher_info[0]["fullname"].title() }}</div>
+        <div class="col-auto fs-4 data-field" data-type="text" id="fullname">{{ teacher_info[0]["fullname"].title() }}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">Sex:</div>
-        {% if teacher_info[0]["sex"] == 1 %}
-        <div class="col-sm-2">Male</div>
-        {% else %}
-        <div class="col-sm-2">Female</div>
-        {% endif %}
+        <div class="col-sm-2 data-field" data-type="dropdown" id="sex">{% if teacher_info[0]["sex"] == 1 %}Male{% else %}Female{% endif
+            %}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">e-mail</div>
-        <div class="col-auto">{{ teacher_info[0]["email"] }}</div>
+        <div class="col-auto data-field" data-type="text" id="email">{{ teacher_info[0]["email"] }}</div>
         <div class="w-100 my-1 border-top"></div>
         <div class="col-sm-2 fw-semibold">phone</div>
-        <div class="col-auto">+91-{{ teacher_info[0]["phone"][:5] }}-{{ teacher_info[0]["phone"][5:] }}</div>
-        <div class="w-100 my-1 border-top"></div>
-        <div class="col-sm-1 col-auto fw-semibold">#</div>
-        <div class="col fw-semibold">Program Code</div>
-        <div class="col fw-semibold">Program Name</div>
-        <div class="col fw-semibold">Course Name</div>
-        {% for row in teacher_info %}
-        <div class="w-100 my-1 border-top"></div>
-        <div class="col-sm-1 col-auto">{{ teacher_info.index(row) + 1 }}</div>
-        <div class="col">{{ row["program_code"] }}</div>
-        <div class="col">{{ row["program_name"] }}</div>
-        <div class="col">{{ row["course_name"] }}</div>
-        {% endfor %}
+        <div class="col-auto data-field" data-type="text" id="phone">{{ teacher_info[0]["phone"] }}</div>
+    </div>
+    <div style="overflow: auto; position: relative; max-height: 460px;" id="info-table">
+        <table class="table mt-3 shadow-lg p-3 bg-body-tertiary rounded border table-striped">
+            <thead>
+                <tr class="fw-semibold">
+                    <th>#</th>
+                    <th>Program Code</th>
+                    <th>Program Name</th>
+                    <th>Section</th>
+                    <th>Course Name</th>
+                    <th>Max Grades</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in teacher_info %}
+                <tr class="data-field" id="program_details-{{ teacher_info.index(row) + 1 }}" data-type="dropdown">
+                    <td id="serial_number">{{ teacher_info.index(row) + 1 }}</td>
+                    <td id="program_code">{{ row["program_code"] }}</td>
+                    <td id="program_name">{{ row["program_name"] }}</td>
+                    <td id="program_section">{{ row["program_section"] }}</td>
+                    <td id="course_name">{{ row["course_name"] }}</td>
+                    <td id="max_grades">{{ row["max_grades"] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
     {% if user_type == 1 %}
     <div class="row mt-3">
-        <div class="col">
-            <button type="button" class="btn btn-primary">Edit Data</button>
+        <div class="col" id="form-action">
+            <button type="button" class="btn btn-primary" id="edit-data">Edit Data</button>
         </div>
     </div>
     {% endif %}
 </div>
+{% if user_type == 1 %}
+<script src="./static/js/editDBfromView.js"></script>
+{% endif %}
 {% endblock %}
