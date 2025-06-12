@@ -1,8 +1,7 @@
 from csv import DictReader
 from functools import wraps
-from flask import flash,request, redirect, url_for, session
+from flask import flash, redirect, url_for, session
 from io import TextIOWrapper
-from json import dumps, loads
 from werkzeug.security import generate_password_hash
 from concurrent.futures import ThreadPoolExecutor
 
@@ -10,6 +9,15 @@ ALLOWED_EXTENSIONS = {'csv'}
 MISSINGVAL = "Missing"
 MAXGRADES = 100
 
+
+# Check if the user is logged in
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get("userid") is None:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # check if the file is allowed
 def allowed_file(filename):
@@ -30,15 +38,6 @@ def csvDataStreamToList(dataStream):
     for row in data:
         rows.append(row)
     return rows
-
-# Check if the user is logged in
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get("userid") is None:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 
 # # SECTION - MAKE DB FROM UPLOAD CSVs -------------------------------------------------
@@ -182,7 +181,6 @@ def make_students_table(data, db, cursor, lastcol):
         if student_id[0] is None:
             break
 
-        course_ids = []
         grades = 0
         for n in range(lastcol, len(row)):
             if row[row_keys[n]] == "":
@@ -190,8 +188,6 @@ def make_students_table(data, db, cursor, lastcol):
             
             course_id = db.execute("SELECT id FROM programs WHERE program_code = ? AND course_name = ?", (row["programcode"], row[row_keys[n]])).fetchone()
             batch.append((roll_no, reg_no, section, grades, course_id[0], student_id[0],))
-            # course_ids.append(course_id[0])
-            # grades.append(0)
 
     
     try:
@@ -209,14 +205,3 @@ def section_to_int(char):
     c = char.lower()
     section = ord(c) - 97
     return section
-
-
-# # SECTION - GET DATA FROM DB--------------------------------------------------
-# Get teachers list
-
-# Get programs + sections list
-
-# Get program students list
-# Get Student Info
-
-# Get program courses list
