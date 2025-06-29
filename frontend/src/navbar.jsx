@@ -23,11 +23,13 @@ export default function Navbar({ signOut, userContext }) {
                 <Link className={(location.pathname === `/profile/user/${user.username}`) ? 'nav-link active' : 'nav-link'} to={`/profile/user/${user.username}`}>Profile
                 </Link>
               </li>
-              {/* if user is admin */}
+              {/* if user is admin */
+              user.role == 1 &&
               <li className="nav-item text-end">
                 <Link className={(location.pathname === '/upload') ? 'nav-link active' : 'nav-link'} to="/upload">Upload CSV
                 </Link>
               </li>
+              }
             </ul>
           }
           <div className="navbar-nav d-flex ms-auto">

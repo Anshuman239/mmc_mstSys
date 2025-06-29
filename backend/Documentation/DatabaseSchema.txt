@@ -1,0 +1,39 @@
+CREATE TABLE roles (
+id INTEGER PRIMARY KEY,
+role TEXT UNIQUE NOT NULL
+);
+
+CREATE TABLE users (
+id INTEGER PRIMARY KEY,
+username TEXT UNIQUE NOT NULL,
+passhash TEXT NOT NULL,
+fullname TEXT NOT NULL,
+role_id INTEGER NOT NULL,
+sex BOOLEAN NOT NULL,
+email TEXT,
+phone TEXT,
+FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE programs (
+id INTEGER PRIMARY KEY,
+program_code TEXT NOT NULL,
+program_name TEXT NOT NULL,
+program_section INTEGER,
+course_name TEXT,
+max_grades INTEGER,
+teacher_id INTEGER,
+FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE students (
+id INTEGER PRIMARY KEY,
+roll_no INTEGER NOT NULL,
+registration_id TEXT NOT NULL,
+section INTEGER,
+grade INTEGER,
+course_id INTEGER,
+user_id INTEGER,
+FOREIGN KEY (course_id) REFERENCES programs(id) ON DELETE CASCADE ON UPDATE CASCADE
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
+);

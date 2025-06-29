@@ -1,12 +1,12 @@
 import { useEffect, useState, createContext, useContext, } from 'react';
-import { BrowserRouter, useNavigate, Routes, Route, Link, Outlet, Navigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, useNavigate, Routes, Route, Link, Outlet, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from './navbar.jsx';
 import Footer from './footer.jsx';
 import './Zephyr/bootstrap.css'
 
-
-const API = import.meta.env.VITE_REST_API;
+const API = '/api'
+//const API = import.meta.env.VITE_REST_API;
 const USER_TYPES = ["Superadmin", "Admin", "Editor", "Viewer"];
 const UserContext = createContext(null);
 
@@ -45,7 +45,8 @@ function App() {
           user.setFullname(data.user.fullname);
           user.setRole(data.user.role);
         }
-      }).catch(() => {
+      }).catch((error) => {
+        // console.log(error)
         user.setIsLoggedIn(false);
       }).finally(() => {
         setAuthChecked(true);
@@ -64,39 +65,98 @@ function App() {
         user.setRole(-1);
       }
     }).catch(e => {
-      console.log('Unable to signout, error code: ', e.response.status);
+      alert('Failed to signout.')
+      //console.log('Unable to signout, error code: ', e.response.status);
     });
   }
 
   return (
-      <BrowserRouter>
-        <div className='container-flex'>
-          <UserContext.Provider value={user}>
-            <Navbar signOut={signOut} userContext={UserContext} />
-            <Routes>
-              <Route path='/' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Index /> : <Navigate to='/login' />} />
-              <Route path='/upload' element={!authChecked ? <>Loading...</> : isLoggedIn ? <UploadCSV /> : <Navigate to='/login' />} />
-              <Route path='/profile/user/:user_name' element={!authChecked ? <>Loading...</> : isLoggedIn ? <ProfilePage /> : <Navigate to='/login' />} />
-              <Route path='/registeradmin' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Navigate to='/' /> : <RegisterPage />} />
-              <Route path='/login' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Navigate to='/' /> : <LoginPage />} />
-            </Routes>
-            <Footer />
-          </UserContext.Provider>
-        </div>
-      </BrowserRouter>
+    <BrowserRouter>
+      <div className='container-flex'>
+        <UserContext.Provider value={user}>
+          <Navbar signOut={signOut} userContext={UserContext} />
+          <Routes>
+            <Route path='/login' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Navigate to='/' /> : <LoginPage />} />
+            <Route path='/registeradmin' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Navigate to='/' /> : <RegisterPage />} />
+            <Route path='/' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Index /> : <Navigate to='/login' />} />
+            <Route path='/profile/user/:user_name' element={!authChecked ? <>Loading...</> : isLoggedIn ? <ProfilePage /> : <Navigate to='/login' />} />
+            <Route path='/upload' element={!authChecked ? <>Loading...</> : isLoggedIn && user.role == 1 ? (<UploadCSV />) : (<Navigate to='/login' />)} />
+            <Route path='/programs/:program_name/:section' element={!authChecked ? <>Loading...</> : isLoggedIn && [1,2,3].includes(user.role) ? (<ProgramDetails />) : (<Navigate to='/login' />)} />
+          </Routes>
+          <Footer />
+        </UserContext.Provider>
+      </div>
+    </BrowserRouter>
   );
 }
 
-function Index() {
-  const user = useContext(UserContext);
-  const location = useLocation()
-  useEffect(() => {
+function AdminDashboard() {
+  const navigate = useNavigate();
+  const [programs, setPrograms] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [isDataLoad, setIsDataLoad] = useState(false);
 
-  }, [location.pathname]);
+  useEffect(() => {
+    axios.get(API + '/data', { withCredentials: true })
+      .then(response => {
+        const data = response.data;
+        if (response.status === 200) {
+          setPrograms(data.programs);
+          setTeachers(data.teachers);
+          setSections(data.sections);
+        }
+        // console.log(data);
+      })
+      .catch(error => {
+        // console.log(error);
+        alert('An error occured while fetching data');
+      })
+      .finally(() => {
+        setIsDataLoad(true);
+      });
+  }, []);
+
+  
+  const teachersTable = (
+    <table className='table table-striped'>
+      <thead>
+        <tr>
+          <th>S.no.</th>
+          <th>Teacher name</th>
+          <th>Sex</th>
+          <th>Email</th>
+          <th>Phone</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {teachers.map((teacher, index) => {
+          return (
+            <tr key={teacher.id}>
+              <td>{index + 1}</td>
+              <td>{teacher.fullname.split(' ').map((e) => {
+                return e.charAt(0).toUpperCase() + e.substring(1,) + " ";
+              })}</td>
+              <td>{teacher.sex === 0 ? 'Male' : 'Female'}</td>
+              <td>{teacher.email}</td>
+              <td>{teacher.phone}</td>
+              <td>
+                <button className='btn btn-secondary p-1' onClick={() => navigate('/profile/user/' + teacher.username)}>
+                  <span className="material-symbols-outlined align-bottom">
+                    search
+                  </span>
+                </button>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 
   return (
     <>
-      <MiniProfile />
       <div className='container-sm my-3'>
         <ul className="nav nav-tabs" id="myTab" role="tablist">
           <li className="nav-item" role="presentation">
@@ -107,10 +167,226 @@ function Index() {
           </li>
         </ul>
         <div className="tab-content" id="myTabContent">
-          <div className="tab-pane fade show active" id="programs" role="tabpanel" aria-labelledby="programs-tab">Programs</div>
-          <div className="tab-pane fade" id="teacters" role="tabpanel" aria-labelledby="teacters-tab">Teachers</div>
+          <div className="tab-pane fade show active" id="programs" role="tabpanel" aria-labelledby="programs-tab">
+            <table className='table table-striped'>
+              <thead>
+                <tr>
+                  <th>S.no.</th>
+                  <th>Program Code</th>
+                  <th>Section</th>
+                  <th>Program Name</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isDataLoad ? 
+                programs.map((element, index)=>{
+                  return <ProgramsRow key={index} program={element} index={index} sections={sections} />
+                })
+                :
+                <tr><td>Getting Data...</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <div className="tab-pane fade" id="teacters" role="tabpanel" aria-labelledby="teacters-tab">
+            {teachersTable}
+          </div>
         </div>
       </div>
+    </>
+  );
+}
+
+
+function ProgramsRow({program, index, sections}) {
+  const navigate = useNavigate();
+  const [sec, setSec] = useState('A');
+  return (
+    <tr key={program.program_code}>
+      <td>{index + 1}</td>
+      <td>{program.program_code}</td>
+      <td>
+        <span className="d-md-inline-flex">
+          <select className="form-select form-select-sm" name="program_section" value={sec} onChange={e=>setSec(e.target.value)}>
+            {sections.map((element) => {
+              return (
+                element.program_code === program.program_code &&
+                <option key={element.id}>
+                  {element.program_section}
+                </option>
+
+              )
+            })}
+          </select>
+        </span>
+      </td>
+      <td>{program.program_name}</td>
+      <td>
+        <button className='btn btn-secondary p-1' onClick={() => navigate('/programs/' + encodeURI(program.program_code) + '/' + encodeURI(sec))}>
+          <span className="material-symbols-outlined align-bottom">
+            search
+          </span>
+        </button>
+      </td>
+    </tr>
+  )
+};
+
+
+function TeacherDashboard(){
+  const [programs, setPrograms] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const navigate = useNavigate()
+
+  useEffect(()=>{
+    axios.get(API + '/data', {withCredentials : true})
+    .then(response=>{
+      if (response.status === 200){
+        setPrograms(response.data.programs);
+        //console.log(response.data)
+      }
+    })
+    .catch(error=>{
+      alert('Unable to fetch data');
+    })
+    .finally(()=>{
+      setIsDataLoaded(true);
+    });
+  }, [])
+
+  return (
+    <div className='container mt-4'>
+    <div className='mb-3'><h5>Select Program to grade.</h5></div>
+    {isDataLoaded
+    ?
+      <table className='table table-striped'>
+        <thead>
+          <tr>
+            <th>S.No.</th>
+            <th>Code</th>
+            <th>Section</th>
+            <th>Program Name</th>
+            <th>Course</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            programs.map((element, index)=>{
+              return (
+                <tr key={element.id}>
+                  <th>{index + 1}</th>
+                  <td>{element.program_code}</td>
+                  <td>{String.fromCharCode(element.program_section+65)}</td>
+                  <td>{element.program_name}</td>
+                  <td>{element.course_name}</td>
+                  <td>
+                    <button className='btn btn-secondary p-1' onClick={() => navigate('/programs/' +
+                      encodeURI(element.program_code) + '/' + encodeURI(element.program_section) + '?coursename=' + encodeURI(element.course_name))}>
+                      <span className="material-symbols-outlined align-bottom">
+                        search
+                      </span>
+                    </button>
+                  </td>
+                </tr>
+              )
+            })
+          }
+        </tbody>
+      </table>
+    :
+    <div>Getting Data...</div>
+  }
+    </div>
+  );
+}
+
+function StudentDashboard(){
+  const [studentInfo, setStudentInfo] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(()=>{
+    axios.get(API + '/data', {withCredentials : true})
+    .then(response=>{
+      if(response.status === 200){
+        setStudentInfo(response.data.studentInfo);
+        // console.log(response.data);
+      }
+    })
+    .catch(error=>{
+      alert('Failed to get data.')
+    })
+      .finally(() => setIsDataLoaded(true))
+  }, []);
+
+  return (
+    <>
+      {isDataLoaded
+        ?
+        <div className='container my-3'>
+          <div className='container shadow-lg rounded'>
+            <div className='row border-bottom py-3'>
+              <div className='col-2 fw-semibold'>Roll No</div>
+              <div className='col-auto'>{studentInfo[0].roll_no}</div>
+            </div>
+            <div className='row border-bottom py-3'>
+              <div className='col-2 fw-semibold'>Registration ID</div>
+              <div className='col-auto'>{studentInfo[0].registration_id}</div>
+            </div>
+            <div className='row border-bottom py-3'>
+              <div className='col-2 fw-semibold'>Program Code</div>
+              <div className='col-auto'>{studentInfo[0].program_code}</div>
+            </div>
+            <div className='row border-bottom py-3'>
+              <div className='col-2 fw-semibold'>Program Name</div>
+              <div className='col-auto'>{studentInfo[0].program_name}</div>
+            </div>
+            <div className='row border-bottom py-3'>
+              <div className='col-2 fw-semibold'>Section</div>
+              <div className='col-auto'>{String.fromCharCode(studentInfo[0].program_section + 65)}</div>
+            </div>
+          </div>
+          <table className='table table-striped'>
+            <thead>
+              <tr>
+                <th>S.No.</th>
+                <th>Subject</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {studentInfo.map((element, index)=>{
+                return (
+                  <tr key={element.id}>
+                    <td>{index + 1}</td>
+                    <td>{element.course_name}</td>
+                    <td><span className='fw-semibold'>{element.grade}</span> / {element.max_grades}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        :
+        <>Loading...</>
+      }
+    </>
+  );
+}
+
+function Index() {
+  const user = useContext(UserContext);
+
+  return (
+    <>
+      <div className='container-sm pt-5'>
+        <div>
+          <h4>{user.fullname}'s Dashboard</h4>
+        </div>
+      </div>
+      {user.role === 1 && <AdminDashboard /> }
+      {user.role === 3 && <TeacherDashboard /> }
+      {user.role === 4 && <StudentDashboard /> }
     </>
   );
 }
@@ -121,7 +397,7 @@ function LoginPage() {
   const [password, setPassword] = useState('');
   const user = useContext(UserContext);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (username && password) {
       axios.post(API + '/login', {
@@ -137,7 +413,8 @@ function LoginPage() {
           user.setRole(data.user.role);
         }
       }).catch(error => {
-        console.log('Post error: ', error.response);
+        alert("An error occured while attempting to login!")
+        // console.log('Post error: ', error.response);
       }).finally(() => {
         navigate('/');
       });
@@ -166,22 +443,11 @@ function LoginPage() {
   );
 }
 
-function MiniProfile() {
-  const user = useContext(UserContext);
-  return (
-    <div className='container-sm pt-5'>
-      <div>
-        <h4>{user.fullname}'s Dashboard</h4>
-      </div>
-    </div>
-  );
-}
-
 function ProfilePage() {
   const { user_name } = useParams();
-  const { role } = useContext(UserContext).role;
-  const postAddress = '/update/user/'+user_name;
-  
+  const role = useContext(UserContext).role;
+  const postAddress = '/update/user/' + user_name;
+
   const loaction = useLocation();
 
   const [isFetchUserData, setIsFetchUserData] = useState(true);
@@ -192,7 +458,7 @@ function ProfilePage() {
   const [sex, setSex] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  
+
   useEffect(() => {
     axios.get(API + `/user/${user_name}`, { withCredentials: true })
       .then(response => {
@@ -212,77 +478,507 @@ function ProfilePage() {
   }, [loaction.pathname, user_name]);
 
   return (
-    isFetchUserData 
-    ?
-    <div>Fetching user data</div>
-    :
-    <div className='container shadow p-3 mt-5 bg-body-tertiary rounded'>
-      <h3 className='fw-bold'>Your Profile</h3>
-      <div className='row mt-3'>
-        <ProfileRow
-          type='text'
-          title='Full Name'
-          data={fullname}
-          dbKey='fullname'
-          setData={setFullname}
-          isEdit={role != 4}
-          regex={fullnameRE}
-          errorMsg="Only Alphabets, Space and ' allowed." 
-          postAddress={postAddress} />
-        <ProfileRow
-          title='Sex'
-          data={sex}
-          setData={setSex}
-          dbKey='sex'
-          isEdit={role != 4}
-          isDropDown={true}
-          postAddress={postAddress} />
-        <ProfileRow
-          type='text'
-          title='Username'
-          data={username}
-          dbKey='username'
-          setData={setUsername}
-          dataType='username'
-          isEdit={true}
-          isNeedConfirm={true}
-          regex={usernameRE}
-          errorMsg='Minimum 8 characters. Only alphabets, numbers and _ allowed'
-          postAddress={postAddress} />
-        <ProfileRow
-          type='password'
-          title='Password'
-          data={password}
-          dbKey='password'
-          setData={setPassword}
-          isEdit={true}
-          isNeedConfirm={true}
-          regex={passwordRE}
-          errorMsg='Password must be 8-16 characters long. It must have one lower case, upper case, digit and special character in it.'
-          postAddress={postAddress} />
-        <ProfileRow
-          type='email'
-          title='Email'
-          dbKey='email'
-          data={email}
-          setData={setEmail}
-          isEdit={role != 4}
-          regex={emailRE}
-          errorMsg='Input valid email address.'
-          postAddress={postAddress} />
-        <ProfileRow
-          type='phone'
-          title='Phone'
-          data={phone}
-          dbKey='phone'
-          setData={setPhone}
-          isEdit={role != 4}
-          regex={phoneRE}
-          errorMsg='Input 10 digit phone number.'
-          postAddress={postAddress} />
+    isFetchUserData
+      ?
+      <div>Fetching user data</div>
+      :
+      <div className='container shadow p-3 mt-5 bg-body-tertiary rounded'>
+        <h3 className='fw-bold'>Your Profile</h3>
+        <div className='row mt-3'>
+          <ProfileRow
+            type='text'
+            title='Full Name'
+            data={fullname}
+            dbKey='fullname'
+            setData={setFullname}
+            isEdit={[1,2,3].includes(role)}
+            regex={fullnameRE}
+            errorMsg="Only Alphabets, Space and ' allowed."
+            postAddress={postAddress} />
+          <ProfileRow
+            title='Sex'
+            data={sex}
+            setData={setSex}
+            dbKey='sex'
+            isEdit={[1,2,3].includes(role)}
+            isDropDown={true}
+            postAddress={postAddress} />
+          <ProfileRow
+            type='text'
+            title='Username'
+            data={username}
+            dbKey='username'
+            setData={setUsername}
+            dataType='username'
+            isEdit={true}
+            isNeedConfirm={true}
+            regex={usernameRE}
+            errorMsg='Minimum 8 characters. Only alphabets, numbers and _ allowed'
+            postAddress={postAddress} />
+          <ProfileRow
+            type='password'
+            title='Password'
+            data={password}
+            dbKey='password'
+            setData={setPassword}
+            isEdit={true}
+            isNeedConfirm={true}
+            regex={passwordRE}
+            errorMsg='Password must be 8-16 characters long. It must have one lower case, upper case, digit and special character in it.'
+            postAddress={postAddress} />
+          <ProfileRow
+            type='email'
+            title='Email'
+            dbKey='email'
+            data={email}
+            setData={setEmail}
+            isEdit={[1,2,3].includes(role)}
+            regex={emailRE}
+            errorMsg='Input valid email address.'
+            postAddress={postAddress} />
+          <ProfileRow
+            type='phone'
+            title='Phone'
+            data={phone}
+            dbKey='phone'
+            setData={setPhone}
+            isEdit={[1,2,3].includes(role)}
+            regex={phoneRE}
+            errorMsg='Input 10 digit phone number.'
+            postAddress={postAddress} />
+        </div>
       </div>
-    </div>
   );
+}
+
+
+function ProgramDetails() {
+  const [searchParam] = useSearchParams();
+  const { program_name, section } = useParams();
+  const user_role = useContext(UserContext).role;
+  const coursename = searchParam.get('coursename');
+
+  return (
+    coursename
+      ?
+      <CourseGradePage program_name={program_name} section={section} course_name={coursename}/>
+      :
+      <>
+      {
+        user_role == 1
+        ?
+        <AdminProgramPage program_name={program_name} section={section} />
+        :
+        <>{alert('access denied.')}</>
+      }
+      </>
+  )
+
+}
+
+function AdminProgramPage({program_name, section}) {
+  const [students, setStudents] = useState([]);
+  const [teacters, setTeachers] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(() => {
+    axios.get(API + '/programs/' + decodeURI(program_name) + '/' + decodeURI(section), { withCredentials: true })
+      .then(response => {
+        const data = response.data;
+        if (response.status === 200) {
+          setStudents(data.students);
+          setTeachers(data.teachers);
+        }
+        //console.log(data);
+      })
+      .catch(error => {
+        alert('Failed to get data.')
+        //console.log(error)
+      })
+      .finally(setIsDataLoaded(true));
+  }, []);
+
+  return (
+    <>
+      <div className='container-sm my-3'>
+        <h3>{program_name} details:</h3>
+        <ul className="nav nav-tabs" id="myTab" role="tablist">
+          <li className="nav-item" role="presentation">
+            <button className="nav-link active" id="programs-tab" data-bs-toggle="tab" data-bs-target="#programs" type="button" role="tab" aria-controls="programs" aria-selected="true">Students</button>
+          </li>
+        </ul>
+        <div className="tab-content" id="myTabContent">
+          <div className="tab-pane fade show active" id="programs" role="tabpanel" aria-labelledby="programs-tab">
+            <table className='table table-striped table-hover'>
+              <thead>
+                <tr>
+                  <th>S.no.</th>
+                  <th>Student Name</th>
+                  <th>Roll No.</th>
+                  <th>Registration ID</th>
+                  <th>Detailes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isDataLoaded
+                  ?
+                  students.map((element, index) => {
+                    return <StudentRow key={index} student={element} index={index} teachers={teacters} />
+                  })
+                  :
+                  <tr><td>Loading...</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function CourseGradePage({program_name, section, course_name}){
+  const [students, setStudents] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  useEffect(()=>{
+    const getaddress = '/programs/' + encodeURI(program_name) + '/' + encodeURI(section) + '?coursename=' + encodeURI(course_name)
+    axios.get(API + getaddress,
+  {withCredentials:true})
+  .then(response=>{
+    if (response.status === 200){
+      setStudents(response.data.students);
+      //console.log(response.data.students);
+    }
+  })
+  .catch(error=>{
+    alert('Error while getting data.');
+  })
+  .finally(()=>setIsDataLoaded(true));
+  }, []);
+
+  return (
+    <>{isDataLoaded
+          ?
+          <div className='container mt-5'>
+            <div className='container shadow p-3 mb-5 bg-body-tertiary rounded'>
+              <div className='row border-bottom py-3'>
+                <div className='col-2 fw-semibold'>Program Code</div>
+                <div className='col-auto'>{students[0].program_code}</div>
+              </div>
+              <div className='row border-bottom py-3'>
+                <div className='col-2 fw-semibold'>Program Name</div>
+                <div className='col-auto'>{students[0].program_name}</div>
+              </div>
+              <div className='row border-bottom py-3'>
+                <div className='col-2 fw-semibold'>Section</div>
+                <div className='col-auto'>{String.fromCharCode(students[0].program_section + 65)}</div>
+              </div>
+              <div className='row py-3'>
+                <div className='col-2 fw-semibold'>Course Name</div>
+                <div className='col-auto'>{students[0].course_name}</div>
+              </div>
+            </div>
+            <table className='table table-striped'>
+              <thead>
+                <tr>
+                  <th>Roll No</th>
+                  <th>Name</th>
+                  <th>Registration No</th>
+                  <th>Grade</th>
+                  <th>Edit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((element) => {
+                  return (
+                    <tr key={element.id}>
+                      <td>{element.roll_no}</td>
+                      <td>{element.fullname}</td>
+                      <td>{element.registration_id}</td>
+                      <GradeStudents student={element} />
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          :
+          <>
+            Loading...
+          </>
+      }</>
+  );
+}
+
+function StudentRow({student, index, teachers}){
+  const navigate = useNavigate();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <>
+      <tr onClick={() => setIsExpanded(!isExpanded)}>
+        <td>{index + 1}</td>
+        <td>{student.fullname.split(' ').map((e)=>{
+          return e.charAt(0).toUpperCase() + e.substring(1,) + ' '
+        })}</td>
+        <td>{student.roll_no}</td>
+        <td>{student.registration_id}</td>
+        <td>
+          {isExpanded
+            ?
+            <button className='btn btn-secondary p-1' onClick={() => setIsExpanded(false)}>
+              <span className="material-symbols-outlined align-bottom">
+                stat_1
+              </span>
+            </button>
+            :
+            <button className='btn btn-secondary p-1' onClick={() => setIsExpanded(true)}>
+              <span className="material-symbols-outlined align-bottom">
+                stat_minus_1
+              </span>
+            </button>
+          }
+        </td>
+      </tr>
+      {isExpanded &&
+        <tr>
+          <td colSpan={'5'}> 
+            <table className='table table-striped-columns'>
+              <thead>
+                <tr>
+                  <th>S.No.</th>
+                  <th>Subjects</th>
+                  <th>Marks</th>
+                  <th>Teacher</th>
+                  <th>Edit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                student.course_id.map((e, index) => {
+                  return (<StudentStubjectsRow key={index} teachers={teachers} student={student} index={index} rowKey={e}/>);
+                })
+                }
+                <tr>
+                  <td>
+                    <button className='btn btn-primary p-1 mx-1'  onClick={()=>navigate('/profile/user/' + student.username)}>
+                      Profile
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      }
+    </>
+  );
+}
+
+function StudentStubjectsRow({teachers, student, index, rowKey}) {
+  const [isGradeEdit, setIsGradeEdit] = useState(false)
+  const [isSpinner, setIsSpinner] = useState(false)
+  const [updatedGrade, setUpdatedGrade] = useState(student.grades[index].toString())
+
+  const handleGradeUpdate = async ()=>{
+    setIsSpinner(true);
+    const updateInput = updatedGrade.trim();
+    const csrfToken = getCookie('csrf_access_token');
+
+    if (updateInput != student.grades[index] && updateInput != '' && /\S/.test(updateInput)){
+      axios.post(API + '/update/grades/' + student.program_code + '/' + student.program_section, {
+        'registration_id': student.registration_id,
+        'course_id' : student.course_id[index],
+        'new_grade': updateInput
+      }, {
+        headers:{
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken
+        },
+        withCredentials: true
+      })
+      .then(response=>{
+        if (response.status === 200)
+          student.grades[index] = updateInput;
+      })
+      .catch(error=>{
+        alert('Faild to update student grade.')
+      })
+      .finally(()=>{
+        setIsGradeEdit(false);
+        setIsSpinner(false);
+      });
+    }
+  }
+
+  return (
+    <tr key={rowKey}>
+      <td>{index + 1}</td>
+      <td>{student.course_name[index]}</td>
+      <td>
+        <div className='row d-flex align-items-center'>
+            {isGradeEdit
+              ?
+            <div className='col-auto mx-0'>
+              <input value={updatedGrade}
+              onChange={(v)=>{
+                if(v.target.value <= student.max_grades[index])
+                  setUpdatedGrade(v.target.value);
+              }}
+              className='form-control form-control-sm' maxLength={'3'}
+              style={{width: '40px'}}></input>
+              </div>
+              :
+              <div className='col-auto pe-1'>
+                {student.grades[index]}
+              </div>
+            }
+          <div className='col-auto ps-1'>/ {student.max_grades[index]}</div>
+        </div>
+      </td>
+      <td>{teachers.map((t) => {
+        if (t.course_name.includes(student.course_name[index]))
+          return t.fullname.split(' ').map((n) => {
+            return n.charAt(0).toUpperCase() + n.substring(1,) + " "
+          });
+      })}
+      </td>
+      <td>
+        {
+          isGradeEdit
+            ?
+            <>
+              {
+                isSpinner
+                  ?
+                  <div className="spinner-border text-primary" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                  </div>
+                  :
+                  <>
+                    <button className='btn btn-primary p-1 mx-1'  onClick={handleGradeUpdate}>
+                      <span className="material-symbols-outlined align-bottom">
+                        check
+                      </span>
+                    </button>
+                    <button className='btn btn-secondary p-1 mx-1'
+                      onClick={() => {
+                        setIsGradeEdit(false);
+                        setUpdatedGrade(student.grades[index]);
+                      }}>
+                      <span className="material-symbols-outlined align-bottom">
+                        close
+                      </span>
+                    </button>
+                  </>
+              }
+            </>
+            :
+            <button className='btn btn-primary p-1' onClick={() => setIsGradeEdit(true)}>
+              Grade
+            </button>
+        }
+      </td>
+    </tr>
+  );
+}
+
+function GradeStudents({student}){
+  const [isGradeEdit, setIsGradeEdit] = useState(false)
+  const [isSpinner, setIsSpinner] = useState(false)
+  const [updatedGrade, setUpdatedGrade] = useState(student.grade.toString())
+
+  const handleGradeUpdate = async ()=>{
+    setIsSpinner(true);
+    const updateInput = updatedGrade.trim();
+    const csrfToken = getCookie('csrf_access_token');
+
+    if (updateInput != student.grade && updateInput != '' && /\S/.test(updateInput)){
+      axios.post(API + '/update/grades/' + student.program_code + '/' + String.fromCharCode(student.program_section + 65), {
+        'registration_id': student.registration_id,
+        'course_id' : student.course_id,
+        'new_grade': updateInput
+      }, {
+        headers:{
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken
+        },
+        withCredentials: true
+      })
+      .then(response=>{
+        if (response.status === 200)
+          student.grade = updateInput;
+      })
+      .catch(error=>{
+        alert('Faild to update student grade.')
+      })
+      .finally(()=>{
+        setIsGradeEdit(false);
+        setIsSpinner(false);
+      });
+    }
+  }
+
+  return (<>
+    <td>
+      <div className='row d-flex align-items-center'>
+        {isGradeEdit
+          ?
+          <div className='col-auto mx-0'>
+            <input value={updatedGrade}
+              onChange={(v) => {
+                if (v.target.value <= student.max_grades)
+                  setUpdatedGrade(v.target.value);
+              }}
+              className='form-control form-control-sm' maxLength={'3'}
+              style={{ width: '40px' }}></input>
+          </div>
+          :
+          <div className='col-auto pe-1'>
+            {student.grade}
+          </div>
+        }
+        <div className='col-auto ps-1'>/ {student.max_grades}</div>
+      </div>
+    </td>
+    <td>
+      {
+        isGradeEdit
+          ?
+          <>
+            {
+              isSpinner
+                ?
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                :
+                <>
+                  <button className='btn btn-primary p-1 mx-1' onClick={handleGradeUpdate}>
+                    <span className="material-symbols-outlined align-bottom">
+                      check
+                    </span>
+                  </button>
+                  <button className='btn btn-secondary p-1 mx-1'
+                    onClick={() => {
+                      setIsGradeEdit(false);
+                      setUpdatedGrade(student.grades);
+                    }}>
+                    <span className="material-symbols-outlined align-bottom">
+                      close
+                    </span>
+                  </button>
+                </>
+            }
+          </>
+          :
+          <button className='btn btn-primary p-1' onClick={() => setIsGradeEdit(true)}>
+            Grade
+          </button>
+      }
+    </td>
+  </>)
 }
 
 function RegisterPage() {
@@ -315,7 +1011,8 @@ function RegisterPage() {
         navigate('/login');
       }
     }).catch(error => {
-      console.log('Post error: ', error.response);
+      alert("Something when wrong. Please try login else sign-up again.")
+      // console.log('Post error: ', error.response);
     });
   }
 
@@ -441,7 +1138,7 @@ function UploadCSV() {
       }
     }).catch((error) => {
       alert("An error occured while upload. Please try again. ");
-      console.log(error)
+      // console.log(error)
     }).finally(() => {
       navigate('/')
     });
@@ -470,7 +1167,7 @@ function UploadCSV() {
   );
 }
 
-function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isNeedConfirm, regex, errorMsg, postAddress}) {
+function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isNeedConfirm, regex, errorMsg, postAddress }) {
   const [editing, setEditing] = useState(false);
   const [isSpinner, setIsSpinner] = useState(false)
   const [fieldValue, setFieldValue] = useState(data);
@@ -480,33 +1177,36 @@ function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isN
     setEditing(true);
   }
 
-  const handleUpdate = async()=>{
+  const handleUpdate = async () => {
     const csrfToken = getCookie('csrf_access_token');
     setIsSpinner(true)
-    if(data != fieldValue){
+    const trimedUserInput = fieldValue.trim()
+    if (data != trimedUserInput && trimedUserInput != '' && /\S/.test(trimedUserInput)) {
       setEditing(false);
       axios.post(API + postAddress, {
         'key': dbKey,
-        'value': fieldValue
+        'value': trimedUserInput
       }, {
         headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': csrfToken
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken
         },
-        withCredentials:true
-      }).then(response=>{
-        if(response.status === 200){
+        withCredentials: true
+      }).then(response => {
+        if (response.status === 200) {
           setData(response.data.updatedValue);
         }
-      }).catch((error)=>{
-        console.log(error.response.data)
+      }).catch((error) => {
+        //console.log(error.response)
         alert('Error occured while updating ' + title + '. Please try again');
         setFieldValue(data)
         setConfirmFieldValue('')
-      }).finally(()=>{
+      }).finally(() => {
         setEditing(false);
         setIsSpinner(false);
       })
+    }else{
+      alert("Input not valid!")
     }
   }
 
@@ -568,24 +1268,25 @@ function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isN
                 </button>
                   :
                   <>
-                  {
-                      isSpinner ? <div className="spinner-border text-primary" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                      </div>
-                      :
-                    <>
-                      <button className='btn btn-primary p-1' onClick={handleUpdate}>
-                        <span className="material-symbols-outlined align-bottom">
-                          check
-                        </span>
-                      </button>
-                      <button className='btn btn-secondary p-1' onClick={handleCancel}>
-                        <span className="material-symbols-outlined align-bottom">
-                          close
-                        </span>
-                      </button>
-                    </>
-                  }
+                    {
+                      isSpinner ?
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        :
+                        <>
+                          <button className='btn btn-primary p-1' onClick={handleUpdate}>
+                            <span className="material-symbols-outlined align-bottom">
+                              check
+                            </span>
+                          </button>
+                          <button className='btn btn-secondary p-1' onClick={handleCancel}>
+                            <span className="material-symbols-outlined align-bottom">
+                              close
+                            </span>
+                          </button>
+                        </>
+                    }
                   </>
               }
             </div>
@@ -593,12 +1294,6 @@ function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isN
         </div>
       </div>
     </div>
-  );
-}
-
-function Button({ title, handleClick, btnType }) {
-  return (
-    <button type='submit' className={'btn ' + btnType} onClick={handleClick} >{title}</button>
   );
 }
 

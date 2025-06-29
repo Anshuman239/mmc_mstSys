@@ -2,8 +2,7 @@ import os
 from flask_cors import CORS
 from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
-from flask import Flask, flash, g, render_template, request, redirect, url_for, session, jsonify
-from flask_session import Session
+from flask import Flask, g, request, jsonify
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,6 +18,7 @@ app = Flask(__name__)
 load_dotenv()
 
 REGISTERADMIN = os.environ.get("REGISTERADMIN")
+FRONTENDAPI = os.environ.get('FRONTENDAPI')
 ASCIIBASE = 65
 USERNAME_RE = r"[a-zA-Z0-9_]{8,}"
 PASSWORD_RE = r'(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,16}'
@@ -29,13 +29,16 @@ PHONE_RE = r"\d{10}"
 # Set-up Server Session
 app.secret_key = os.environ.get("SECRET_KEY")
 app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 5  # 5 MB
-app.config["JWT_COOKIE_SECURE"] = False                     # SET TRUE IN PRODUCTION
-app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_KEY")
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_COOKIE_SAMESITE"] = "None"
+app.config["JWT_COOKIE_SECURE"] = True                     # SET TRUE IN PRODUCTION
+app.config['JWT_SESSION_COOKIE'] = False
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
+
 
 jwt = JWTManager(app)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=[FRONTENDAPI])
 
 
 
@@ -100,40 +103,7 @@ def refresh_expiring_jwts(response):
         except:
             response = response
         return response
-
-
-
-# Default route
-@app.route('/', methods=['GET'])
-@jwt_required()
-def index():
-    # SUPERADMIN dashboard
-    if session["role_id"] == 1:
-        db = get_db()
-        programs = db.execute("SELECT DISTINCT program_code, program_name FROM programs").fetchall()
-        teachers = db.execute("SELECT id, fullname, email, phone, sex FROM users WHERE role_id = ? ORDER BY fullname ASC", (3,)).fetchall()
-        section = db.execute("SELECT DISTINCT program_code, program_section FROM programs").fetchall()
-
-        programs_dict = [dict(row) for row in programs]
-        teachers_dict = [dict(row) for row in teachers]
-        sections_dict = []
-
-        # convert section from int to uppercase char
-        for row in section:
-            dict_row = dict(row)
-            dict_row["program_section"] = chr(dict_row["program_section"] + ASCIIBASE)
-            sections_dict.append(dict_row)
-        
-
-        remove_duplicates_in_list(programs_dict, "program_code")
-        remove_duplicates_in_list(teachers_dict, "fullname")
-        
-        return render_template("./superadmin/superadmin_dash.html", title="Home", page="dashboard", programs=programs_dict, teachers=teachers_dict,
-                                sections=sections_dict)
-
-
-    return render_template("dashboard.html", title="Home", page="dashboard")
-
+     
 
 @app.route('/auth/check')
 @jwt_required()
@@ -152,6 +122,77 @@ def auth():
     }   
     response = jsonify({'msg': 'auth successful', 'user': user, 'response-type': 'auth'})
     return response
+
+# Default route
+@app.route('/data', methods=['GET'])
+@jwt_required()
+def data():
+    user = get_jwt()
+    role = user.get('role')
+    
+    # SUPERADMIN dashboard
+    if role == 1:
+        db = get_db()
+        programs = db.execute("SELECT DISTINCT id, program_code, program_name FROM programs ORDER BY program_code ASC").fetchall()
+        teachers = db.execute("SELECT id, username, fullname, email, phone, sex FROM users WHERE role_id = ? ORDER BY fullname ASC", (3,)).fetchall()
+        section = db.execute("SELECT DISTINCT id, program_code, program_section FROM programs").fetchall()
+
+        programs_dict = [dict(row) for row in programs]
+        teachers_dict = [dict(row) for row in teachers]
+        sections_dict = []
+
+        # convert section from int to uppercase char and remove repeating IDs
+        repeatingSections = {}
+        for row in section:
+            dict_row = dict(row)
+            if row['program_code'] in repeatingSections.keys():
+                if row['program_section'] in repeatingSections[row['program_code']]:
+                    continue
+
+            dict_row["program_section"] = chr(dict_row["program_section"] + ASCIIBASE)
+            sections_dict.append(dict_row)
+            try:
+                repeatingSections[row['program_code']].append(row['program_section'])
+            except:
+                repeatingSections[row['program_code']] = [row['program_section']]
+        
+
+        remove_duplicates_in_list(programs_dict, "program_code")
+        remove_duplicates_in_list(teachers_dict, "fullname")
+        
+        return jsonify({'programs': programs_dict, 'sections': sections_dict, 'teachers': teachers_dict})
+
+    # TEACHER dashboard
+    if role == 3:
+        user_id = user.get('user_id')
+        db = get_db()
+
+        # GET ALL THE PROGRAMS COURSES TAUGHT BY THE TEACHER
+        programs = db.execute('''SELECT DISTINCT programs.id, programs.program_code, programs.program_name, programs.program_section, programs.course_name
+                              FROM programs
+                              JOIN users ON programs.teacher_id = users.id
+                              WHERE users.id = ? AND users.role_id = 3''', (user_id,)).fetchall()
+        programs_dict = [dict(row) for row in programs]
+
+        return {'programs': programs_dict}, 200
+    
+
+    # STUDENT dashboard
+    if role == 4:
+        user_id = user.get('user_id')
+        print(f'USERID = {user_id}')
+        db = get_db()
+
+        # GET ALL GRADES FOR CURRENT LOGGED IN STUDENT
+        student_info = db.execute('''SELECT DISTINCT programs.id, programs.program_code, programs.program_section, programs.course_name,
+                                  programs.max_grades, programs.program_name, students.roll_no, students.registration_id, students.grade
+                                  FROM programs
+                                  JOIN students ON programs.id = students.course_id
+                                  WHERE students.user_id = ?''', (user_id,)).fetchall()
+
+        student_info_dict = [dict(row) for row in student_info]
+        return {'studentInfo': student_info_dict}
+    
 
 # Route for the login page
 @app.route('/login', methods=['POST'])
@@ -199,23 +240,73 @@ def logout():
     return response
 
 
-# route to search programs
-@app.route('/programs')
-@m.login_required
-def programs():
-    # render programs details for super admin
-    if session["role_id"] == 1:
-        program_code = request.args.get("code")
-        program_section = request.args.get("section")
+@app.route('/update/grades/<programCode>/<programSection>', methods=['POST'])
+@jwt_required()
+def updateGrades(programCode, programSection):
+    user = get_jwt()
+    role = user.get('role')
+    if role not in [1,2,3]:
+        return {'msg': 'Unauthorized.'}, 401
+    
+    try:
+        section = ord(programSection) - 65
+        print(section)
+        data = request.get_json()
+        registration_id = data['registration_id']
+        course_id = data['course_id']
+        new_grade = data['new_grade']
 
-        if not program_code or not program_section:
-            flash("Invalid query.", "danger")
-            return redirect(url_for("index"))
-        
         db = get_db()
 
-        students = db.execute('''SELECT DISTINCT users.fullname, students.roll_no, students.registration_id, programs.program_code,
-                                students.course_id, programs.course_name
+        db.execute('UPDATE students SET grade = ? WHERE course_id= ? AND registration_id = ? AND section = ?', (new_grade, course_id, registration_id, section))
+        db.commit()
+
+        return {'msg': 'Grade updated successfully'}, 200
+    except:
+        return {'msg': 'Missing data'}, 401
+
+
+
+# route to search programs
+@app.route('/programs/<programCode>/<section>')
+@jwt_required()
+def programs(programCode, section):
+    # render programs details for super admin
+    user = get_jwt()
+    if user.get('role') not in [1, 2, 3]:
+        return {'msg': 'Access denied'}, 401
+    
+    
+    if user.get('role') == 3:
+        try:
+            program_code = programCode
+            program_section = section
+            course = request.args.get('coursename')
+            db = get_db()
+            students_info = db.execute('''SELECT DISTINCT users.id, users.fullname, students.roll_no, students.registration_id,
+                                    students.course_id, students.grade, programs.course_name, programs.program_code, programs.max_grades,
+                                    programs.program_section, programs.program_name
+                                    FROM users
+                                    JOIN students ON users.id = students.user_id
+                                    JOIN programs ON students.course_id = programs.id
+                                    WHERE students.section = ? AND programs.program_code = ? AND programs.course_name = ?
+                                    ORDER BY students.roll_no ASC''',
+                                    (program_section, program_code, course)).fetchall()
+            print (f'program_section={program_section}, program_code={program_code}, course={course}')
+            students_info_dict = [dict(row) for row in students_info]
+
+            return {'students': students_info_dict}, 200
+        except:
+            return {'msg': 'Something went wrong.'}, 503
+
+
+    try:
+        program_code = programCode
+        program_section = ord(section) - 65
+        db = get_db()
+
+        students = db.execute('''SELECT DISTINCT users.username, users.fullname, students.roll_no, students.registration_id, programs.program_code, programs.max_grades,
+                                students.course_id, programs.course_name, students.grade, programs.program_section
                                 FROM users
                                 JOIN students ON users.id = students.user_id
                                 JOIN programs ON students.course_id = programs.id
@@ -224,12 +315,11 @@ def programs():
                                 (program_section, program_code)).fetchall()
 
         teachers = db.execute('''SELECT DISTINCT users.fullname, users.id, programs.course_name
-                              FROM users
-                              JOIN programs ON users.id = programs.teacher_id
-                              WHERE programs.program_section = ? AND programs.program_code = ? AND users.role_id = ?
-                              ORDER BY users.fullname ASC''',
-                              (program_section, program_code, 3)).fetchall()
-
+                                FROM users
+                                JOIN programs ON users.id = programs.teacher_id
+                                WHERE programs.program_section = ? AND programs.program_code = ? AND users.role_id = ?
+                                ORDER BY users.fullname ASC''',
+                                (program_section, program_code, 3)).fetchall()
 
         students_dict = []
         teachers_dict = []
@@ -239,12 +329,16 @@ def programs():
         found = []
         for row in students:
             if row["registration_id"] in found:
-                students_dict[len(students_dict) - 1]["course_name"].append(row["course_name"])
-                students_dict[len(students_dict) - 1]["course_id"].append(row["course_id"])
+                last_index = len(students_dict) - 1
+                students_dict[last_index]["course_name"].append(row["course_name"])
+                students_dict[last_index]["course_id"].append(row["course_id"])
+                students_dict[last_index]["max_grades"].append(row["max_grades"])
+                students_dict[last_index]["grades"].append(row["grade"])
                 continue
             found.append(row["registration_id"])
-            students_dict.append({"fullname": row["fullname"], "roll_no": row["roll_no"], "registration_id": row["registration_id"],
-                                  "program_code": row["program_code"], "course_name": [row["course_name"]], "course_id": [row["course_id"]]})
+            students_dict.append({"username":row["username"], "fullname": row["fullname"], "roll_no": row["roll_no"], "registration_id": row["registration_id"],
+                                    "program_code": row["program_code"], "course_name": [row["course_name"]], "course_id": [row["course_id"]],
+                                    "max_grades": [row["max_grades"]], "grades": [row["grade"]], "program_section": chr(row["program_section"]+65)})
             
         found.clear()
 
@@ -255,10 +349,9 @@ def programs():
             found.append(row["id"])
             teachers_dict.append({"fullname": row["fullname"], "teacher_id": row["id"], "course_name": [row["course_name"]]})
 
-
-        return render_template("/superadmin/programs.html", students=students_dict, program_code=program_code, program_section=program_section, teachers=teachers_dict)
-    
-    return redirect(url_for("index"))
+        return {'students':students_dict, 'teachers':teachers_dict}, 200
+    except:
+        return {'msg': 'Something went wrong.'}, 503
 
 
 # Route for the register page
@@ -329,94 +422,6 @@ def register():
 
     return {"msg": "Registered successfully"}, 200
 
-
-# route to AJAX query
-@app.route('/query')
-@m.login_required
-def query():
-    valid_queries = ["teachers", "students"]
-    if session["role_id"] != 1:
-        return "Access Denied"
-    
-    try:
-        query_type = request.args.get("q")
-    except:
-        return "No query found."
-        
-    db = get_db()
-    if query_type not in valid_queries:
-        return "Access Denied"
-    
-    if query_type == "teachers":
-        responce = db.execute("SELECT DISTINCT program_code, program_name, course_name, max_grades FROM programs").fetchall()
-
-    responce_dict = [dict(row) for row in responce]
-
-    return jsonify(responce_dict)
-
-
-# route to search students
-@app.route('/student')
-@m.login_required
-def student():
-    student_id = request.args.get("id")
-
-    if not student_id:
-        flash ("Invalid request", "danger")
-        return redirect(url_for("index"))
-    
-    db = get_db()
-
-    student_info = db.execute('''SELECT users.id, users.fullname, users.sex, users.email, users.phone,
-                                students.roll_no, students.registration_id, students.section, students.grade,
-                                programs.program_code, programs.program_name, programs.course_name, programs.max_grades, programs.teacher_id
-                                FROM users
-                                JOIN students ON users.id = students.user_id
-                                JOIN programs ON students.course_id = programs.id
-                                WHERE students.registration_id = ? AND users.role_id = ?''',
-                                (student_id, 4)).fetchall()
-    
-    student_info_dict = [dict(row) for row in student_info]
-
-    for row in student_info_dict:
-        try:
-            teacher_name = dict(db.execute("SELECT fullname FROM users WHERE id=? AND role_id=?", (row["teacher_id"], 3)).fetchone())
-        except:
-            teacher_name = {"fullname": "not found"}
-        row["teacher_name"] = teacher_name["fullname"]
-        row["section"] = chr(row["section"] + 65)
-
-
-    return render_template("student.html", user_type = session["role_id"], student_info=student_info_dict)
-
-
-@app.route('/teacher')
-@m.login_required
-def teacher():
-    teacher_id = request.args.get("id")
-
-    if not teacher_id:
-        flash("Invalid Request", "danger")
-        return redirect(url_for("index"))
-    
-    db = get_db()
-
-    teacher_info = db.execute('''SELECT users.id, users.fullname, users.email, users.phone, users.sex,
-                              programs.program_code, programs.program_name, programs.course_name, programs.program_section, programs.max_grades
-                              FROM users
-                              JOIN programs ON users.id =  programs.teacher_id
-                              WHERE users.id = ? AND users.role_id = ?''',
-                              (teacher_id, 3)).fetchall()
-
-
-    teacher_info_dict = []
-    for row in teacher_info:
-        teacher_info_dict.append(dict(row))
-        teacher_info_dict[len(teacher_info_dict) - 1]["program_section"] = chr(teacher_info_dict[len(teacher_info_dict) - 1]["program_section"] + 65)
-        
-
-    return render_template("teacher.html", user_type=session["role_id"], teacher_info=teacher_info_dict)
-
  
 validKeys = ['username', 'password', 'fullname', 'sex', 'email', 'phone']
 validViewerKeys = ['username', 'password']
@@ -476,6 +481,9 @@ def update(username):
             key = 'passhash'
             returnValue = '********'
             updateValue = generate_password_hash(updateValue)
+        elif key == 'sex':
+            updateValue = 1 if updateValue == 'Male' else 0
+        
         db.execute(f"UPDATE users SET {key} = ? WHERE username = ?", (updateValue, username,))
         db.commit()
         print(f'username = {username} and data = {data}')

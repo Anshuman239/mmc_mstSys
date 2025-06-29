@@ -54,7 +54,7 @@ def populate_user_table(data, db, cursor, keys, user_type):
     batch = []
     passwords = []
     for row in data:
-        passwords.append((get_pass(row[keys[1]].lower(), row[keys[4]].lower())))
+        passwords.append((get_pass(row[keys[3]].lower(), row[keys[4]].lower())))
 
     with ThreadPoolExecutor() as executor:
         pass_hash = list(executor.map(hash_password, passwords))
@@ -65,7 +65,7 @@ def populate_user_table(data, db, cursor, keys, user_type):
         username = row[keys[0]].lower()
         email = row[keys[3]].lower()
         phone = row[keys[4]].lower()
-        fullname = row[keys[1]].lower()
+        fullname = row[keys[1]]
         sex = True if row[keys[2]].lower() == "male" else False
         hash = pass_hash[data.index(row)]
 
@@ -99,13 +99,12 @@ def get_pass(param1, param2):
         raise ValueError("Invalid email or phone number format.")
     
     # generate password hash
-    password = param2_char + param2_char
+    password = param1_char + param2_char
 
     # check if password is valid
     # check if password is at least 6 characters long
     if len(password) < 6:
-        flash(f"Error while generating password. Please check {param1} and {param2} in CSV files. All must be valid type.")
-        return redirect(url_for("index"))
+        return {'msg': 'unbale to generate password!'}, 401
     
     return password
 
@@ -135,7 +134,7 @@ def make_program_table(data, db, cursor, lastcol):
             if row[row_keys[n]] == '':
                 continue
 
-            teacher_id = db.execute("SELECT id FROM users WHERE fullname=? AND role_id=?", (row[row_keys[n]].lower(), 3,)).fetchone()
+            teacher_id = db.execute("SELECT id FROM users WHERE fullname=? AND role_id=?", (row[row_keys[n]], 3,)).fetchone()
             
             if teacher_id is None:
                 failedrow.append(f"row number: {data.index(row)} Data: {row[row_keys[n]]}")
