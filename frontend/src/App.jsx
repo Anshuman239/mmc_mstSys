@@ -81,7 +81,7 @@ function App() {
             <Route path='/' element={!authChecked ? <>Loading...</> : isLoggedIn ? <Index /> : <Navigate to='/login' />} />
             <Route path='/profile/user/:user_name' element={!authChecked ? <>Loading...</> : isLoggedIn ? <ProfilePage /> : <Navigate to='/login' />} />
             <Route path='/upload' element={!authChecked ? <>Loading...</> : isLoggedIn && user.role == 1 ? (<UploadCSV />) : (<Navigate to='/login' />)} />
-            <Route path='/programs/:program_name/:section' element={!authChecked ? <>Loading...</> : isLoggedIn && [1,2,3].includes(user.role) ? (<ProgramDetails />) : (<Navigate to='/login' />)} />
+            <Route path='/programs/:program_name/:section' element={!authChecked ? <>Loading...</> : isLoggedIn && [1, 2, 3].includes(user.role) ? (<ProgramDetails />) : (<Navigate to='/login' />)} />
           </Routes>
           <Footer />
         </UserContext.Provider>
@@ -117,7 +117,7 @@ function AdminDashboard() {
       });
   }, []);
 
-  
+
   const teachersTable = (
     <table className='table table-striped'>
       <thead>
@@ -179,12 +179,12 @@ function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {isDataLoad ? 
-                programs.map((element, index)=>{
-                  return <ProgramsRow key={index} program={element} index={index} sections={sections} />
-                })
-                :
-                <tr><td>Getting Data...</td></tr>}
+                {isDataLoad ?
+                  programs.map((element, index) => {
+                    return <ProgramsRow key={index} program={element} index={index} sections={sections} />
+                  })
+                  :
+                  <tr><td>Getting Data...</td></tr>}
               </tbody>
             </table>
           </div>
@@ -198,7 +198,7 @@ function AdminDashboard() {
 }
 
 
-function ProgramsRow({program, index, sections}) {
+function ProgramsRow({ program, index, sections }) {
   const navigate = useNavigate();
   const [sec, setSec] = useState('A');
   return (
@@ -207,7 +207,7 @@ function ProgramsRow({program, index, sections}) {
       <td>{program.program_code}</td>
       <td>
         <span className="d-md-inline-flex">
-          <select className="form-select form-select-sm" name="program_section" value={sec} onChange={e=>setSec(e.target.value)}>
+          <select className="form-select form-select-sm" name="program_section" value={sec} onChange={e => setSec(e.target.value)}>
             {sections.map((element) => {
               return (
                 element.program_code === program.program_code &&
@@ -233,89 +233,89 @@ function ProgramsRow({program, index, sections}) {
 };
 
 
-function TeacherDashboard(){
+function TeacherDashboard() {
   const [programs, setPrograms] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const navigate = useNavigate()
 
-  useEffect(()=>{
-    axios.get(API + '/data', {withCredentials : true})
-    .then(response=>{
-      if (response.status === 200){
-        setPrograms(response.data.programs);
-        //console.log(response.data)
-      }
-    })
-    .catch(error=>{
-      alert('Unable to fetch data');
-    })
-    .finally(()=>{
-      setIsDataLoaded(true);
-    });
+  useEffect(() => {
+    axios.get(API + '/data', { withCredentials: true })
+      .then(response => {
+        if (response.status === 200) {
+          setPrograms(response.data.programs);
+          //console.log(response.data)
+        }
+      })
+      .catch(error => {
+        alert('Unable to fetch data');
+      })
+      .finally(() => {
+        setIsDataLoaded(true);
+      });
   }, [])
 
   return (
     <div className='container mt-4'>
-    <div className='mb-3'><h5>Select Program to grade.</h5></div>
-    {isDataLoaded
-    ?
-      <table className='table table-striped'>
-        <thead>
-          <tr>
-            <th>S.No.</th>
-            <th>Code</th>
-            <th>Section</th>
-            <th>Program Name</th>
-            <th>Course</th>
-            <th>Details</th>
-          </tr>
-        </thead>
-        <tbody>
-          {
-            programs.map((element, index)=>{
-              return (
-                <tr key={element.id}>
-                  <th>{index + 1}</th>
-                  <td>{element.program_code}</td>
-                  <td>{String.fromCharCode(element.program_section+65)}</td>
-                  <td>{element.program_name}</td>
-                  <td>{element.course_name}</td>
-                  <td>
-                    <button className='btn btn-secondary p-1' onClick={() => navigate('/programs/' +
-                      encodeURI(element.program_code) + '/' + encodeURI(element.program_section) + '?coursename=' + encodeURI(element.course_name))}>
-                      <span className="material-symbols-outlined align-bottom">
-                        search
-                      </span>
-                    </button>
-                  </td>
-                </tr>
-              )
-            })
-          }
-        </tbody>
-      </table>
-    :
-    <div>Getting Data...</div>
-  }
+      <div className='mb-3'><h5>Select Program to grade.</h5></div>
+      {isDataLoaded
+        ?
+        <table className='table table-striped'>
+          <thead>
+            <tr>
+              <th>S.No.</th>
+              <th>Code</th>
+              <th>Section</th>
+              <th>Program Name</th>
+              <th>Course</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              programs.map((element, index) => {
+                return (
+                  <tr key={element.id}>
+                    <th>{index + 1}</th>
+                    <td>{element.program_code}</td>
+                    <td>{String.fromCharCode(element.program_section + 65)}</td>
+                    <td>{element.program_name}</td>
+                    <td>{element.course_name}</td>
+                    <td>
+                      <button className='btn btn-secondary p-1' onClick={() => navigate('/programs/' +
+                        encodeURI(element.program_code) + '/' + encodeURI(element.program_section) + '?coursename=' + encodeURI(element.course_name))}>
+                        <span className="material-symbols-outlined align-bottom">
+                          search
+                        </span>
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })
+            }
+          </tbody>
+        </table>
+        :
+        <div>Getting Data...</div>
+      }
     </div>
   );
 }
 
-function StudentDashboard(){
+function StudentDashboard() {
   const [studentInfo, setStudentInfo] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  useEffect(()=>{
-    axios.get(API + '/data', {withCredentials : true})
-    .then(response=>{
-      if(response.status === 200){
-        setStudentInfo(response.data.studentInfo);
-        // console.log(response.data);
-      }
-    })
-    .catch(error=>{
-      alert('Failed to get data.')
-    })
+  useEffect(() => {
+    axios.get(API + '/data', { withCredentials: true })
+      .then(response => {
+        if (response.status === 200) {
+          setStudentInfo(response.data.studentInfo);
+          // console.log(response.data);
+        }
+      })
+      .catch(error => {
+        alert('Failed to get data.')
+      })
       .finally(() => setIsDataLoaded(true))
   }, []);
 
@@ -355,7 +355,7 @@ function StudentDashboard(){
               </tr>
             </thead>
             <tbody>
-              {studentInfo.map((element, index)=>{
+              {studentInfo.map((element, index) => {
                 return (
                   <tr key={element.id}>
                     <td>{index + 1}</td>
@@ -384,9 +384,9 @@ function Index() {
           <h4>{user.fullname}'s Dashboard</h4>
         </div>
       </div>
-      {user.role === 1 && <AdminDashboard /> }
-      {user.role === 3 && <TeacherDashboard /> }
-      {user.role === 4 && <StudentDashboard /> }
+      {user.role === 1 && <AdminDashboard />}
+      {user.role === 3 && <TeacherDashboard />}
+      {user.role === 4 && <StudentDashboard />}
     </>
   );
 }
@@ -396,6 +396,7 @@ function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const user = useContext(UserContext);
+  const [isSubmited, setIsSubmited] = useState(false)
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -430,12 +431,22 @@ function LoginPage() {
       <div className="row justify-content-center">
         <div className="col-md-3 p-4 shadow-lg bg-body-tertiary rounded">
           <h3>Sign-In</h3>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={(e) => {
+            setIsSubmited(true)
+            handleSubmit(e)
+          }}>
             <FormInputField fieldType='text' fieldName='Username'
               fieldValue={username} onValueChange={setUsername} />
             <FormInputField fieldType='password' fieldName='Password'
               fieldValue={password} onValueChange={setPassword} />
-            <input className='btn btn-primary' type='submit' value='Login' />
+            {isSubmited
+              ?
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              :
+              <input className='btn btn-primary' type='submit' value='Login' />
+            }
           </form>
         </div>
       </div>
@@ -491,7 +502,7 @@ function ProfilePage() {
             data={fullname}
             dbKey='fullname'
             setData={setFullname}
-            isEdit={[1,2,3].includes(role)}
+            isEdit={[1, 2, 3].includes(role)}
             regex={fullnameRE}
             errorMsg="Only Alphabets, Space and ' allowed."
             postAddress={postAddress} />
@@ -500,7 +511,7 @@ function ProfilePage() {
             data={sex}
             setData={setSex}
             dbKey='sex'
-            isEdit={[1,2,3].includes(role)}
+            isEdit={[1, 2, 3].includes(role)}
             isDropDown={true}
             postAddress={postAddress} />
           <ProfileRow
@@ -532,7 +543,7 @@ function ProfilePage() {
             dbKey='email'
             data={email}
             setData={setEmail}
-            isEdit={[1,2,3].includes(role)}
+            isEdit={[1, 2, 3].includes(role)}
             regex={emailRE}
             errorMsg='Input valid email address.'
             postAddress={postAddress} />
@@ -542,7 +553,7 @@ function ProfilePage() {
             data={phone}
             dbKey='phone'
             setData={setPhone}
-            isEdit={[1,2,3].includes(role)}
+            isEdit={[1, 2, 3].includes(role)}
             regex={phoneRE}
             errorMsg='Input 10 digit phone number.'
             postAddress={postAddress} />
@@ -561,22 +572,22 @@ function ProgramDetails() {
   return (
     coursename
       ?
-      <CourseGradePage program_name={program_name} section={section} course_name={coursename}/>
+      <CourseGradePage program_name={program_name} section={section} course_name={coursename} />
       :
       <>
-      {
-        user_role == 1
-        ?
-        <AdminProgramPage program_name={program_name} section={section} />
-        :
-        <>{alert('access denied.')}</>
-      }
+        {
+          user_role == 1
+            ?
+            <AdminProgramPage program_name={program_name} section={section} />
+            :
+            <>{alert('access denied.')}</>
+        }
       </>
   )
 
 }
 
-function AdminProgramPage({program_name, section}) {
+function AdminProgramPage({ program_name, section }) {
   const [students, setStudents] = useState([]);
   const [teacters, setTeachers] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -637,81 +648,81 @@ function AdminProgramPage({program_name, section}) {
   )
 }
 
-function CourseGradePage({program_name, section, course_name}){
+function CourseGradePage({ program_name, section, course_name }) {
   const [students, setStudents] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  useEffect(()=>{
+  useEffect(() => {
     const getaddress = '/programs/' + encodeURI(program_name) + '/' + encodeURI(section) + '?coursename=' + encodeURI(course_name)
     axios.get(API + getaddress,
-  {withCredentials:true})
-  .then(response=>{
-    if (response.status === 200){
-      setStudents(response.data.students);
-      //console.log(response.data.students);
-    }
-  })
-  .catch(error=>{
-    alert('Error while getting data.');
-  })
-  .finally(()=>setIsDataLoaded(true));
+      { withCredentials: true })
+      .then(response => {
+        if (response.status === 200) {
+          setStudents(response.data.students);
+          //console.log(response.data.students);
+        }
+      })
+      .catch(error => {
+        alert('Error while getting data.');
+      })
+      .finally(() => setIsDataLoaded(true));
   }, []);
 
   return (
     <>{isDataLoaded
-          ?
-          <div className='container mt-5'>
-            <div className='container shadow p-3 mb-5 bg-body-tertiary rounded'>
-              <div className='row border-bottom py-3'>
-                <div className='col-2 fw-semibold'>Program Code</div>
-                <div className='col-auto'>{students[0].program_code}</div>
-              </div>
-              <div className='row border-bottom py-3'>
-                <div className='col-2 fw-semibold'>Program Name</div>
-                <div className='col-auto'>{students[0].program_name}</div>
-              </div>
-              <div className='row border-bottom py-3'>
-                <div className='col-2 fw-semibold'>Section</div>
-                <div className='col-auto'>{String.fromCharCode(students[0].program_section + 65)}</div>
-              </div>
-              <div className='row py-3'>
-                <div className='col-2 fw-semibold'>Course Name</div>
-                <div className='col-auto'>{students[0].course_name}</div>
-              </div>
-            </div>
-            <table className='table table-striped'>
-              <thead>
-                <tr>
-                  <th>Roll No</th>
-                  <th>Name</th>
-                  <th>Registration No</th>
-                  <th>Grade</th>
-                  <th>Edit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((element) => {
-                  return (
-                    <tr key={element.id}>
-                      <td>{element.roll_no}</td>
-                      <td>{element.fullname}</td>
-                      <td>{element.registration_id}</td>
-                      <GradeStudents student={element} />
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      ?
+      <div className='container mt-5'>
+        <div className='container shadow p-3 mb-5 bg-body-tertiary rounded'>
+          <div className='row border-bottom py-3'>
+            <div className='col-2 fw-semibold'>Program Code</div>
+            <div className='col-auto'>{students[0].program_code}</div>
           </div>
-          :
-          <>
-            Loading...
-          </>
-      }</>
+          <div className='row border-bottom py-3'>
+            <div className='col-2 fw-semibold'>Program Name</div>
+            <div className='col-auto'>{students[0].program_name}</div>
+          </div>
+          <div className='row border-bottom py-3'>
+            <div className='col-2 fw-semibold'>Section</div>
+            <div className='col-auto'>{String.fromCharCode(students[0].program_section + 65)}</div>
+          </div>
+          <div className='row py-3'>
+            <div className='col-2 fw-semibold'>Course Name</div>
+            <div className='col-auto'>{students[0].course_name}</div>
+          </div>
+        </div>
+        <table className='table table-striped'>
+          <thead>
+            <tr>
+              <th>Roll No</th>
+              <th>Name</th>
+              <th>Registration No</th>
+              <th>Grade</th>
+              <th>Edit</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((element) => {
+              return (
+                <tr key={element.id}>
+                  <td>{element.roll_no}</td>
+                  <td>{element.fullname}</td>
+                  <td>{element.registration_id}</td>
+                  <GradeStudents student={element} />
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      :
+      <>
+        Loading...
+      </>
+    }</>
   );
 }
 
-function StudentRow({student, index, teachers}){
+function StudentRow({ student, index, teachers }) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -719,7 +730,7 @@ function StudentRow({student, index, teachers}){
     <>
       <tr onClick={() => setIsExpanded(!isExpanded)}>
         <td>{index + 1}</td>
-        <td>{student.fullname.split(' ').map((e)=>{
+        <td>{student.fullname.split(' ').map((e) => {
           return e.charAt(0).toUpperCase() + e.substring(1,) + ' '
         })}</td>
         <td>{student.roll_no}</td>
@@ -743,7 +754,7 @@ function StudentRow({student, index, teachers}){
       </tr>
       {isExpanded &&
         <tr>
-          <td colSpan={'5'}> 
+          <td colSpan={'5'}>
             <table className='table table-striped-columns'>
               <thead>
                 <tr>
@@ -756,13 +767,13 @@ function StudentRow({student, index, teachers}){
               </thead>
               <tbody>
                 {
-                student.course_id.map((e, index) => {
-                  return (<StudentStubjectsRow key={index} teachers={teachers} student={student} index={index} rowKey={e}/>);
-                })
+                  student.course_id.map((e, index) => {
+                    return (<StudentStubjectsRow key={index} teachers={teachers} student={student} index={index} rowKey={e} />);
+                  })
                 }
                 <tr>
                   <td>
-                    <button className='btn btn-primary p-1 mx-1'  onClick={()=>navigate('/profile/user/' + student.username)}>
+                    <button className='btn btn-primary p-1 mx-1' onClick={() => navigate('/profile/user/' + student.username)}>
                       Profile
                     </button>
                   </td>
@@ -776,39 +787,39 @@ function StudentRow({student, index, teachers}){
   );
 }
 
-function StudentStubjectsRow({teachers, student, index, rowKey}) {
+function StudentStubjectsRow({ teachers, student, index, rowKey }) {
   const [isGradeEdit, setIsGradeEdit] = useState(false)
   const [isSpinner, setIsSpinner] = useState(false)
   const [updatedGrade, setUpdatedGrade] = useState(student.grades[index].toString())
 
-  const handleGradeUpdate = async ()=>{
+  const handleGradeUpdate = async () => {
     setIsSpinner(true);
     const updateInput = updatedGrade.trim();
     const csrfToken = getCookie('csrf_access_token');
 
-    if (updateInput != student.grades[index] && updateInput != '' && /\S/.test(updateInput)){
+    if (updateInput != student.grades[index] && updateInput != '' && /\S/.test(updateInput)) {
       axios.post(API + '/update/grades/' + student.program_code + '/' + student.program_section, {
         'registration_id': student.registration_id,
-        'course_id' : student.course_id[index],
+        'course_id': student.course_id[index],
         'new_grade': updateInput
       }, {
-        headers:{
+        headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrfToken
         },
         withCredentials: true
       })
-      .then(response=>{
-        if (response.status === 200)
-          student.grades[index] = updateInput;
-      })
-      .catch(error=>{
-        alert('Faild to update student grade.')
-      })
-      .finally(()=>{
-        setIsGradeEdit(false);
-        setIsSpinner(false);
-      });
+        .then(response => {
+          if (response.status === 200)
+            student.grades[index] = updateInput;
+        })
+        .catch(error => {
+          alert('Faild to update student grade.')
+        })
+        .finally(() => {
+          setIsGradeEdit(false);
+          setIsSpinner(false);
+        });
     }
   }
 
@@ -818,22 +829,22 @@ function StudentStubjectsRow({teachers, student, index, rowKey}) {
       <td>{student.course_name[index]}</td>
       <td>
         <div className='row d-flex align-items-center'>
-            {isGradeEdit
-              ?
+          {isGradeEdit
+            ?
             <div className='col-auto mx-0'>
               <input value={updatedGrade}
-              onChange={(v)=>{
-                if(v.target.value <= student.max_grades[index])
-                  setUpdatedGrade(v.target.value);
-              }}
-              className='form-control form-control-sm' maxLength={'3'}
-              style={{width: '40px'}}></input>
-              </div>
-              :
-              <div className='col-auto pe-1'>
-                {student.grades[index]}
-              </div>
-            }
+                onChange={(v) => {
+                  if (v.target.value <= student.max_grades[index])
+                    setUpdatedGrade(v.target.value);
+                }}
+                className='form-control form-control-sm' maxLength={'3'}
+                style={{ width: '40px' }}></input>
+            </div>
+            :
+            <div className='col-auto pe-1'>
+              {student.grades[index]}
+            </div>
+          }
           <div className='col-auto ps-1'>/ {student.max_grades[index]}</div>
         </div>
       </td>
@@ -857,7 +868,7 @@ function StudentStubjectsRow({teachers, student, index, rowKey}) {
                   </div>
                   :
                   <>
-                    <button className='btn btn-primary p-1 mx-1'  onClick={handleGradeUpdate}>
+                    <button className='btn btn-primary p-1 mx-1' onClick={handleGradeUpdate}>
                       <span className="material-symbols-outlined align-bottom">
                         check
                       </span>
@@ -884,39 +895,39 @@ function StudentStubjectsRow({teachers, student, index, rowKey}) {
   );
 }
 
-function GradeStudents({student}){
+function GradeStudents({ student }) {
   const [isGradeEdit, setIsGradeEdit] = useState(false)
   const [isSpinner, setIsSpinner] = useState(false)
   const [updatedGrade, setUpdatedGrade] = useState(student.grade.toString())
 
-  const handleGradeUpdate = async ()=>{
+  const handleGradeUpdate = async () => {
     setIsSpinner(true);
     const updateInput = updatedGrade.trim();
     const csrfToken = getCookie('csrf_access_token');
 
-    if (updateInput != student.grade && updateInput != '' && /\S/.test(updateInput)){
+    if (updateInput != student.grade && updateInput != '' && /\S/.test(updateInput)) {
       axios.post(API + '/update/grades/' + student.program_code + '/' + String.fromCharCode(student.program_section + 65), {
         'registration_id': student.registration_id,
-        'course_id' : student.course_id,
+        'course_id': student.course_id,
         'new_grade': updateInput
       }, {
-        headers:{
+        headers: {
           'Content-Type': 'application/json',
           'X-CSRF-TOKEN': csrfToken
         },
         withCredentials: true
       })
-      .then(response=>{
-        if (response.status === 200)
-          student.grade = updateInput;
-      })
-      .catch(error=>{
-        alert('Faild to update student grade.')
-      })
-      .finally(()=>{
-        setIsGradeEdit(false);
-        setIsSpinner(false);
-      });
+        .then(response => {
+          if (response.status === 200)
+            student.grade = updateInput;
+        })
+        .catch(error => {
+          alert('Faild to update student grade.')
+        })
+        .finally(() => {
+          setIsGradeEdit(false);
+          setIsSpinner(false);
+        });
     }
   }
 
@@ -992,6 +1003,8 @@ function RegisterPage() {
   const [user_type, setUser_type] = useState(USER_TYPES[0]);
   const [sex, setSex] = useState('');
 
+  const [isSubmited, setIsSubmited] = useState(false)
+
   const sexs = ["Male", "Female"];
 
   const isAllFieldsValid = usernameRE.test(username) && passwordRE.test(password) && password.localeCompare(confirm_password) === 0 && emailRE.test(email) && phoneRE.test(phone)
@@ -1033,6 +1046,7 @@ function RegisterPage() {
         <div className="col-md-3 p-4 shadow-lg bg-body-tertiary rounded">
           <h3>Register</h3>
           <form onSubmit={(e) => {
+            setIsSubmited(true)
             e.preventDefault();
             if (isAllFieldsValid) {
               handleSubmit()
@@ -1100,7 +1114,14 @@ function RegisterPage() {
               fieldOptions={USER_TYPES}
               fieldValue={user_type}
               onValueChange={setUser_type} />
-            <input className='btn btn-primary' type='submit' value='Register' disabled={!isAllFieldsValid} />
+            {isSubmited
+              ?
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              :
+              <input className='btn btn-primary' type='submit' value='Register' disabled={!isAllFieldsValid} />
+            }
           </form>
         </div>
       </div>
@@ -1113,6 +1134,7 @@ function UploadCSV() {
   const [teachersCSV, setTeachersCSV] = useState(null);
   const [studentsCSV, setStudentsCSV] = useState(null);
   const [programsCSV, setProgramsCSV] = useState(null);
+  const [isSubmited, setIsSubmited] = useState(false)
 
   const handleOnSubmit = async (e) => {
     e.preventDefault();
@@ -1154,11 +1176,21 @@ function UploadCSV() {
         <div className="d-inline-flex row justify-content-center">
           <div className="col p-4 shadow-lg bg-body-tertiary rounded">
             <h3>Upload Data</h3>
-            <form onSubmit={handleOnSubmit}>
+            <form onSubmit={(e) => {
+              setIsSubmited(true)
+              handleOnSubmit(e)
+            }}>
               <FileUploadField fieldType={'file'} fieldName={'Teachers CSV'} specifier={'.csv,text/csv'} onValueChange={setTeachersCSV} />
               <FileUploadField fieldType={'file'} fieldName={'Students CSV'} specifier={'.csv,text/csv'} onValueChange={setStudentsCSV} />
               <FileUploadField fieldType={'file'} fieldName={'Programs CSV'} specifier={'.csv,text/csv'} onValueChange={setProgramsCSV} />
-              <input className='btn btn-primary' type='submit' value='Upload' />
+              {isSubmited
+                ?
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                :
+                <input className='btn btn-primary' type='submit' value='Upload' />
+              }
             </form>
           </div>
         </div>
@@ -1205,7 +1237,7 @@ function ProfileRow({ type, title, data, dbKey, setData, isEdit, isDropDown, isN
         setEditing(false);
         setIsSpinner(false);
       })
-    }else{
+    } else {
       alert("Input not valid!")
     }
   }

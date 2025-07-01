@@ -1,5 +1,8 @@
 # React Ignore
 # Logs
+
+*.sh
+
 logs
 *.log
 npm-debug.log*
