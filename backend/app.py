@@ -17,7 +17,6 @@ app = Flask(__name__)
 # load environment variables from .env file
 load_dotenv()
 
-REGISTERADMIN = os.environ.get("REGISTERADMIN")
 FRONTENDAPI = os.environ.get('FRONTENDAPI')
 ASCIIBASE = 65
 USERNAME_RE = r"[a-zA-Z0-9_]{8,}"
