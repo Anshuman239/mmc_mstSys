@@ -1,6 +1,4 @@
 from csv import DictReader
-from functools import wraps
-from flask import flash, redirect, url_for, session
 from io import TextIOWrapper
 from werkzeug.security import generate_password_hash
 from concurrent.futures import ThreadPoolExecutor
@@ -8,16 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 ALLOWED_EXTENSIONS = {'csv'}
 MISSINGVAL = "Missing"
 MAXGRADES = 100
-
-
-# Check if the user is logged in
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if session.get("userid") is None:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 # check if the file is allowed
 def allowed_file(filename):
@@ -77,8 +65,6 @@ def populate_user_table(data, db, cursor, keys, user_type):
             cursor.executemany(f"INSERT INTO users (username, passhash, fullname, sex, role_id, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?)", b)
     except Exception as e:
         print(f"ERROR - {e}")
-        flash(f"Data missing Teacher or Student in CSV file. Please validate and try again. Error Type {e}", "danger")
-        return redirect(url_for("index"))
     
     db.commit()
 
@@ -114,6 +100,8 @@ def hash_password(password):
     return generate_password_hash(password, method='pbkdf2:sha256:10000')
 
 
+import pprint
+
 # make programs table
 def make_program_table(data, db, cursor, lastcol):
     """
@@ -123,6 +111,9 @@ def make_program_table(data, db, cursor, lastcol):
     """
     failedrow = []
     batch = []
+    teachers_ids = db.execute("SELECT id, fullname FROM users WHERE role_id = 3").fetchall()
+    teachers_ids_dict = {row['fullname']:row['id'] for row in teachers_ids}
+
     for row in data:
         row_keys = list(row.keys())
         program_code = row["Program code"]
@@ -134,13 +125,19 @@ def make_program_table(data, db, cursor, lastcol):
             if row[row_keys[n]] == '':
                 continue
 
-            teacher_id = db.execute("SELECT id FROM users WHERE fullname=? AND role_id=?", (row[row_keys[n]], 3,)).fetchone()
+            try:
+                teacher_id = teachers_ids_dict[row[row_keys[n]]]
+            except:
+                continue
+                
+            # db.execute("SELECT id FROM users WHERE fullname=? AND role_id=?", (row[row_keys[n]], 3,)).fetchone()
             
             if teacher_id is None:
                 failedrow.append(f"row number: {data.index(row)} Data: {row[row_keys[n]]}")
-                t_id = MISSINGVAL
+                # t_id = MISSINGVAL
+                continue
             else:
-                t_id = teacher_id[0]
+                t_id = teacher_id
         
             # Section start from 0
             section = n - lastcol
@@ -151,11 +148,10 @@ def make_program_table(data, db, cursor, lastcol):
         db.execute("BEGIN")
         for b in chunk(batch, 500):
             cursor.executemany("INSERT INTO programs(program_code, program_name, program_section, course_name, max_grades, teacher_id) VALUES(?, ?, ?, ?, ?, ?)", b)
+            db.commit()    
     except Exception as e:
-        flash(f"Data missing in Programs CSV file. Please validate and try again. Error Type {e}", "danger")
-        return redirect(url_for("index"))
+        print(f"Data missing in Programs CSV file. Please validate and try again. Error Type {e}")
             
-    db.commit()    
     return failedrow
 
 
@@ -168,34 +164,52 @@ def make_students_table(data, db, cursor, lastcol):
     """
 
     batch = []
+    students_ids = db.execute("SELECT username, id FROM users WHERE role_id = 4").fetchall()
+    students_ids_dict = {row['username']:row['id'] for row in students_ids}
+
+    course_ids = db.execute("SELECT id, program_code, course_name FROM programs")
+    course_ids_dict = {}
+    for row in course_ids:
+        prg_c = row['program_code']
+        crs_n = row['course_name']
+        i = row['id']
+        if prg_c not in course_ids_dict.keys():
+            course_ids_dict[prg_c] = {crs_n:i}
+            continue
+        if crs_n not in course_ids_dict[prg_c].keys():
+            course_ids_dict[prg_c][crs_n] = i
+        
+
+
     for row in data:
         row_keys = list(row.keys())
         roll_no = row["rollno"]
         reg_no = row["registrationid"]
         section = section_to_int(row["section"])
 
-        student_id = db.execute("SELECT id FROM users WHERE username = ?", (reg_no,)).fetchone()
-        
 
-        if student_id[0] is None:
-            break
+        student_id = students_ids_dict[f'{reg_no}']
+
+        if student_id is None:
+            continue
 
         grades = 0
         for n in range(lastcol, len(row)):
             if row[row_keys[n]] == "":
                 break
-            
-            course_id = db.execute("SELECT id FROM programs WHERE program_code = ? AND course_name = ?", (row["programcode"], row[row_keys[n]])).fetchone()
-            batch.append((roll_no, reg_no, section, grades, course_id[0], student_id[0],))
+            try:
+                course_id = course_ids_dict[row["programcode"]][row[row_keys[n]]]
+            except:
+                continue
 
+            batch.append((roll_no, reg_no, section, grades, course_id, student_id,))
     
     try:
         db.execute("BEGIN")
         for b in chunk(batch, 500):
             cursor.executemany("INSERT INTO students (roll_no, registration_id, section, grade, course_id, user_id) VALUES(?, ?, ?, ?, ?, ?)", b)
     except Exception as e:
-        flash(f"Data missing in Student CSV file. Please validate and try again. Error Type {e}", "danger")
-        return redirect(url_for("index"))
+        print(f'Error occured while uploading CSV {e}')
     
     db.commit()
 

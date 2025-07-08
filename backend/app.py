@@ -6,8 +6,9 @@ from flask import Flask, g, request, jsonify
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlite3 import connect, Error, Row
+from sqlite3 import Error, Row
 from re import fullmatch, search
+import sqlitecloud
 
 import model as m
 
@@ -48,9 +49,9 @@ def get_db():
     
     if "db" not in g:
         try:
-            g.db = connect(db_file)
-            g.db.row_factory = Row
-        except Error as e:
+            g.db = sqlitecloud.connect(db_file)
+            g.db.row_factory = sqlitecloud.Row
+        except:
             return None
     return g.db
 
@@ -208,9 +209,9 @@ def login():
         return {"msg": "Please fill in all fields"}, 401
     
     # Check if the user exists in the database
-    row = db.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    row = db.execute(f'''SELECT * FROM users WHERE username = ?''', (username,)).fetchone()
 
-    if row is None or not check_password_hash(row["passhash"], password):
+    if row is None or not check_password_hash(row['passhash'], password):
         return {"msg": "Invalid username or password"}, 401
     
     additional_calims ={"role": row["role_id"], "user_id":row["id"]}
@@ -529,12 +530,12 @@ def upload():
             csv_data[key] = m.csvDataStreamToList(file)
     
     # delete rows if exist before make
-    db.execute("DELETE FROM users WHERE role_id != ?", (1,))
-    db.execute("DELETE FROM programs")
     db.execute("DELETE FROM students")
+    db.execute("DELETE FROM programs")
+    db.execute("DELETE FROM users WHERE role_id != ?", (1,))
     db.commit()
 
-    # Populate user Table with teacher data - role_id = 2 (editor)
+    # Populate user Table with teacher data | role_id = 3 (editor)
     m.populate_user_table(csv_data["teacherdata"], db, cursor, ['e-mail', 'name', 'sex', 'e-mail', 'phone'], 3)
     m.populate_user_table(csv_data["studentdata"], db, cursor, ['registrationid', 'name', 'sex', 'e-mail', 'phone'], 4)
     program_log = m.make_program_table(csv_data["programdata"], db, cursor, 3)
