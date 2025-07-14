@@ -6,9 +6,8 @@ from flask import Flask, g, request, jsonify
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, JWTManager, set_access_cookies, unset_jwt_cookies
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlite3 import Error, Row
-from re import fullmatch, search
 import sqlitecloud
+from re import fullmatch, search
 
 import model as m
 
@@ -38,7 +37,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 
 
 jwt = JWTManager(app)
-CORS(app, supports_credentials=True, origins=[FRONTENDAPI])
+CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "http://localhost:5173"}})
 
 
 
@@ -180,7 +179,7 @@ def data():
     # STUDENT dashboard
     if role == 4:
         user_id = user.get('user_id')
-        print(f'USERID = {user_id}')
+        # print(f'USERID = {user_id}')
         db = get_db()
 
         # GET ALL GRADES FOR CURRENT LOGGED IN STUDENT
@@ -250,7 +249,7 @@ def updateGrades(programCode, programSection):
     
     try:
         section = ord(programSection) - 65
-        print(section)
+        # print(section)
         data = request.get_json()
         registration_id = data['registration_id']
         course_id = data['course_id']
@@ -292,7 +291,7 @@ def programs(programCode, section):
                                     WHERE students.section = ? AND programs.program_code = ? AND programs.course_name = ?
                                     ORDER BY students.roll_no ASC''',
                                     (program_section, program_code, course)).fetchall()
-            print (f'program_section={program_section}, program_code={program_code}, course={course}')
+            # print (f'program_section={program_section}, program_code={program_code}, course={course}')
             students_info_dict = [dict(row) for row in students_info]
 
             return {'students': students_info_dict}, 200
@@ -486,7 +485,7 @@ def update(username):
         
         db.execute(f"UPDATE users SET {key} = ? WHERE username = ?", (updateValue, username,))
         db.commit()
-        print(f'username = {username} and data = {data}')
+        # print(f'username = {username} and data = {data}')
     except:
         return {'msg': 'something went wrong'}, 503
     

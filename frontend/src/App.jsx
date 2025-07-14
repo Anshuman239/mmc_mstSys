@@ -6,7 +6,7 @@ import Footer from './footer.jsx';
 import './Zephyr/bootstrap.css'
 
 const API = '/api'
-//const API = import.meta.env.VITE_REST_API;
+// const API = "http://127.0.0.1:8000"
 const USER_TYPES = ["Superadmin", "Admin", "Editor", "Viewer"];
 const UserContext = createContext(null);
 
