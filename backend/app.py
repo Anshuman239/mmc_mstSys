@@ -18,6 +18,7 @@ app = Flask(__name__)
 load_dotenv()
 
 FRONTENDAPI = os.environ.get('FRONTENDAPI')
+CORSALLOW = os.environ.get('CORSALLOW')
 ASCIIBASE = 65
 USERNAME_RE = r"[a-zA-Z0-9_]{8,}"
 PASSWORD_RE = r'(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,16}'
@@ -37,7 +38,7 @@ app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(days=3)
 
 
 jwt = JWTManager(app)
-CORS(app, supports_credentials=True, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+CORS(app, supports_credentials=True, origins=[CORSALLOW])
 
 
 
