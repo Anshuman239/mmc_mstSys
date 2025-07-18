@@ -4,7 +4,7 @@ from werkzeug.security import generate_password_hash
 from concurrent.futures import ThreadPoolExecutor
 
 ALLOWED_EXTENSIONS = {'csv'}
-MISSINGVAL = "Missing"
+MISSINGVAL = 10000
 MAXGRADES = 100
 
 # check if the file is allowed
@@ -100,8 +100,6 @@ def hash_password(password):
     return generate_password_hash(password, method='pbkdf2:sha256:10000')
 
 
-import pprint
-
 # make programs table
 def make_program_table(data, db, cursor, lastcol):
     """
@@ -109,6 +107,11 @@ def make_program_table(data, db, cursor, lastcol):
 
     lastcol (INTEGER) - it is last row past which list of teaches begin - INDEX strats from 1
     """
+
+    db.execute("INSERT INTO users (id, username, passhash, fullname, sex, role_id, email, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+               (10000, "Missing", "Missing", "Missing", 0, 3, "Missing", "Missing"))
+    db.commit()
+    
     failedrow = []
     batch = []
     teachers_ids = db.execute("SELECT id, fullname FROM users WHERE role_id = 3").fetchall()
@@ -128,14 +131,13 @@ def make_program_table(data, db, cursor, lastcol):
             try:
                 teacher_id = teachers_ids_dict[row[row_keys[n]]]
             except:
-                continue
+                t_id = MISSINGVAL
                 
             # db.execute("SELECT id FROM users WHERE fullname=? AND role_id=?", (row[row_keys[n]], 3,)).fetchone()
             
-            if teacher_id is None:
-                failedrow.append(f"row number: {data.index(row)} Data: {row[row_keys[n]]}")
-                # t_id = MISSINGVAL
-                continue
+            if not teacher_id:
+                 failedrow.append(f"row number: {data.index(row)} Data: {row[row_keys[n]]}")
+                 t_id = MISSINGVAL
             else:
                 t_id = teacher_id
         
@@ -143,7 +145,7 @@ def make_program_table(data, db, cursor, lastcol):
             section = n - lastcol
 
             batch.append((program_code, program_name, section, course_name, MAXGRADES, t_id))
-        
+            # print(f"program_code = {program_code}, program_name = {program_name}, section = {section}, course_name = {course_name}")        
     try:
         db.execute("BEGIN")
         for b in chunk(batch, 500):
@@ -155,38 +157,37 @@ def make_program_table(data, db, cursor, lastcol):
     return failedrow
 
 
+import pprint
 # make studnet table
 def make_students_table(data, db, cursor, lastcol):
     """
     Populate students table connected with
 
     lastcol (INTEGER) - it is last row past which list of subjects begin - INDEX strats from 1
-    """
-
+    """ 
+    for s in range (0, 11):
+        db.execute("INSERT INTO programs (program_code, program_name, program_section, course_name, max_grades, teacher_id) VALUES (?,?,?,?,?,?)",
+                    ("Missing", "Missing", s, "Missing", 0, MISSINGVAL))
+    db.commit()    
+    
     batch = []
     students_ids = db.execute("SELECT username, id FROM users WHERE role_id = 4").fetchall()
     students_ids_dict = {row['username']:row['id'] for row in students_ids}
 
-    course_ids = db.execute("SELECT id, program_code, course_name FROM programs")
+    course_ids = db.execute("SELECT DISTINCT id, program_code, course_name, program_section FROM programs").fetchall()
     course_ids_dict = {}
     for row in course_ids:
         prg_c = row['program_code']
         crs_n = row['course_name']
+        crs_s = row['program_section']
         i = row['id']
-        if prg_c not in course_ids_dict.keys():
-            course_ids_dict[prg_c] = {crs_n:i}
-            continue
-        if crs_n not in course_ids_dict[prg_c].keys():
-            course_ids_dict[prg_c][crs_n] = i
-        
-
+        course_ids_dict[(prg_c,crs_n,crs_s)] = i
 
     for row in data:
         row_keys = list(row.keys())
         roll_no = row["rollno"]
         reg_no = row["registrationid"]
         section = section_to_int(row["section"])
-
 
         student_id = students_ids_dict[f'{reg_no}']
 
@@ -198,9 +199,10 @@ def make_students_table(data, db, cursor, lastcol):
             if row[row_keys[n]] == "":
                 break
             try:
-                course_id = course_ids_dict[row["programcode"]][row[row_keys[n]]]
+                course_id = course_ids_dict[(row["programcode"],row[row_keys[n]],section)]
+                # print(course_id)
             except:
-                continue
+                course_id = course_ids_dict[("Missing","Missing",section)]
 
             batch.append((roll_no, reg_no, section, grades, course_id, student_id,))
     

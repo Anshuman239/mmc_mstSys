@@ -600,13 +600,15 @@ function AdminProgramPage({ program_name, section }) {
           setStudents(data.students);
           setTeachers(data.teachers);
         }
-        //console.log(data);
+        console.log(data);
       })
       .catch(error => {
         alert('Failed to get data.')
         //console.log(error)
       })
-      .finally(setIsDataLoaded(true));
+      .finally(()=>{
+        setIsDataLoaded(true)
+      });
   }, []);
 
   return (
@@ -798,6 +800,7 @@ function StudentStubjectsRow({ teachers, student, index, rowKey }) {
     const csrfToken = getCookie('csrf_access_token');
 
     if (updateInput != student.grades[index] && updateInput != '' && /\S/.test(updateInput)) {
+      console.log(student.program_section);
       axios.post(API + '/update/grades/' + student.program_code + '/' + student.program_section, {
         'registration_id': student.registration_id,
         'course_id': student.course_id[index],

@@ -7,6 +7,7 @@ from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, j
 import json
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlitecloud
+# import sqlite3
 from re import fullmatch, search
 
 import model as m
@@ -266,7 +267,6 @@ def updateGrades(programCode, programSection):
         return {'msg': 'Missing data'}, 401
 
 
-
 # route to search programs
 @app.route('/programs/<programCode>/<section>')
 @jwt_required()
@@ -303,6 +303,7 @@ def programs(programCode, section):
     try:
         program_code = programCode
         program_section = ord(section) - 65
+
         db = get_db()
 
         students = db.execute('''SELECT DISTINCT users.username, users.fullname, students.roll_no, students.registration_id, programs.program_code, programs.max_grades,
@@ -339,7 +340,7 @@ def programs(programCode, section):
             students_dict.append({"username":row["username"], "fullname": row["fullname"], "roll_no": row["roll_no"], "registration_id": row["registration_id"],
                                     "program_code": row["program_code"], "course_name": [row["course_name"]], "course_id": [row["course_id"]],
                                     "max_grades": [row["max_grades"]], "grades": [row["grade"]], "program_section": chr(row["program_section"]+65)})
-            
+                        
         found.clear()
 
         for row in teachers:
