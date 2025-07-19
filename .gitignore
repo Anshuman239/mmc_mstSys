@@ -2,6 +2,7 @@
 # Logs
 
 *.sh
+*.bkp
 
 logs
 *.log
