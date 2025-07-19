@@ -425,7 +425,7 @@ function LoginPage() {
   return (
     <div className='container w-100 m-auto'>
       <div className="text-center mt-5">
-        <h1>Multani Mal Modi College MST Portal</h1>
+        <h1>College Result Managemt Portal</h1>
         <p className="lead">Sign in to your account</p>
       </div>
       <div className="row justify-content-center">
@@ -1035,7 +1035,7 @@ function RegisterPage() {
   return (
     <div className='container'>
       <div className="text-center mt-5">
-        <h1>Multani Mal Modi College MST Portal</h1>
+        <h1>College Result Managemt Portal</h1>
         <p className="lead">Create your Superadmin account</p>
         <div className="alert alert-info" role="alert">
           <p><strong>Note:</strong> This is a one time process.</p>
@@ -1172,7 +1172,7 @@ function UploadCSV() {
   return (
     <div className="container">
       <div className="text-center mt-5">
-        <h1>Multani Mal Modi College MST Portal</h1>
+        <h1>College Result Managemt Portal</h1>
         <p className="lead">Upload CSV</p>
       </div>
       <div className='d-flex justify-content-center'>

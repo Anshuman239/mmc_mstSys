@@ -7,7 +7,7 @@ export default function Navbar({ signOut, userContext }) {
   return (
     <nav className="navbar navbar-expand-md bg-primary" data-bs-theme="dark">
       <div className="container-md">
-        <Link className="navbar-brand" to="/">MMMC MST PORTAL</Link>
+        <Link className="navbar-brand" to="/">RESULT MANAGEMENT PORTAL</Link>
         <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
           aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
           <span className="navbar-toggler-icon"></span>
