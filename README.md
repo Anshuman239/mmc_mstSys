@@ -36,7 +36,7 @@ Eventually, the idea came from a conversation with my father (a CS professor), w
 
 ## 🧑‍💻 About the App
 
-### 🔗 Working Demo Video
+### 🔗 https://youtu.be/hxcoeoLhRjk
 
 _Not hosted publicly due to academic reasons. Fully functional on private EC2 instance._
 

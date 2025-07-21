@@ -561,7 +561,7 @@ def userinfo(username):
 
         user = {'username': row['username'],
                 'fullname': row['fullname'],
-                'sex': 'Male' if row['sex'] == 1 else 'Female',
+                'sex': 'Male' if row['sex'] == 0 else 'Female',
                 'email': row['email'],
                 'phone': row['phone']}
         
